@@ -34,7 +34,7 @@ void reEnumerate(void)
     tud_disconnect();
 
     is_msc_mode = 1;
-    
+
     desc_device.bLength = sizeof(tusb_desc_device_t);   // Size of this descriptor in bytes
     desc_device.bDescriptorType = 0x01;                 // Descriptor type = Device
     desc_device.bcdUSB = 0x0200;                        // USB spec version (2.0)
@@ -63,7 +63,7 @@ void reEnumerate(void)
 void hid_task(void)
 {
     if(is_msc_mode) return;
-    
+
     static uint32_t ms = 0;
     if (board_millis() - ms < 10) return;
     ms = board_millis();
@@ -94,12 +94,12 @@ void hid_task(void)
     uint8_t c = payload[payload_index];
     if (c == 0x01)
     {
-        report.modifier = KEYBOAGUIRD_MODIFIER_LEFT;
+        report.modifier = KEYBOARD_MODIFIER_LEFTGUI;
         report.keycode[0] = HID_KEY_R;
     }
     else if (c == 0x02)
     {
-        report.modifier = KEYBOAGUIRD_MODIFIER_LEFT;
+        report.modifier = KEYBOARD_MODIFIER_LEFTGUI;
         report.keycode[0] = HID_KEY_R;
     }
     else
@@ -107,7 +107,7 @@ void hid_task(void)
         report.modifier = ascii_to_keycode[c][0];
         report.keycode[0] = ascii_to_keycode[c][1];
     }
-    
+
     tud_hid_keyboard_report(REPORT_ID_KEYBOARD, report.modifier, report.keycode);
     key_down = true;
 }
