@@ -24,6 +24,10 @@
 
 #ifndef USB_DESCRIPTORS_H_
 #define USB_DESCRIPTORS_H_
+extern char const *string_desc_arr[];
+extern uint8_t const desc_configuration_msc[];
+extern uint8_t const desc_configuration_hid[];
+extern uint8_t const *active_config;
 
 enum
 {

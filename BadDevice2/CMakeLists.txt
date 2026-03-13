@@ -39,6 +39,7 @@ add_executable(BadDevice2
                 src/BadDevice2.c
                 src/usb_descriptors.c
                 src/device_core.c
+                src/msc_disk.c
 )
 
 pico_set_program_name(BadDevice2 "BadDevice2")
