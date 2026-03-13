@@ -36,7 +36,7 @@ pico_sdk_init()
 # Add executable. Default name is the project name, version 0.1
 
 add_executable(BadDevice2
-                src/BadDevice2.c
+                src/main.c
                 src/usb_descriptors.c
                 src/device_core.c
                 src/msc_disk.c
