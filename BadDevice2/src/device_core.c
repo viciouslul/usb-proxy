@@ -63,14 +63,13 @@ void reEnumerate(void)
 void hid_task(void)
 {
     if(is_msc_mode) return;
-
+    
     static uint32_t ms = 0;
     if (board_millis() - ms < 10) return;
     ms = board_millis();
 
     if (!tud_mounted()) return;
     if (ms < 1000) return;
-
     if (sent) return;
 
     hid_keyboard_report_t report = {0};
