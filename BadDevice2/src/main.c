@@ -1,5 +1,4 @@
     #include <stdio.h>
-    #include "pico/stdlib.h"
     #include "device_core.h"
     #include "pico/stdlib.h"
     #include "tusb.h"
@@ -108,8 +107,7 @@
             {
                 if (debounce(&last_key_btn1))
                 {
-                    fillPayload("u got rekt");
-                    gpio_put(LED_PIN, 0);
+                    fillPayload("\x01rcmd\n\x02"); //windows
                     handle_btn1 = 0;
                 }
             }

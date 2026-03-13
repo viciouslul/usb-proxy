@@ -14,9 +14,7 @@ static int payload_index = 0;
 static bool sent = false;
 uint8_t const ascii_to_keycode[128][2] = { HID_ASCII_TO_KEYCODE };
 static bool is_msc_mode = false;
-
 extern tusb_desc_device_t desc_device;
-
 
 void fillPayload(const char* inputPayload)
 {
@@ -95,10 +93,23 @@ void hid_task(void)
     }
 
     uint8_t c = payload[payload_index];
-    report.modifier = ascii_to_keycode[c][0];
-    report.keycode[0] = ascii_to_keycode[c][1];
+    if (c == 0x01)
+    {
+        report.modifier = KEYBOAGUIRD_MODIFIER_LEFT;
+        report.keycode[0] = HID_KEY_R;
+    }
+    else if (c == 0x02)
+    {
+        report.modifier = KEYBOAGUIRD_MODIFIER_LEFT;
+        report.keycode[0] = HID_KEY_R;
+    }
+    else
+    {
+        report.modifier = ascii_to_keycode[c][0];
+        report.keycode[0] = ascii_to_keycode[c][1];
+    }
+    
     tud_hid_keyboard_report(REPORT_ID_KEYBOARD, report.modifier, report.keycode);
-
     key_down = true;
 }
 
