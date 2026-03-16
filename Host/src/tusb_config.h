@@ -1,34 +1,34 @@
 
 /*
- * The MIT License (MIT)
- *
- * Copyright (c) 2019 Ha Thach (tinyusb.org)
- *
- * Permission is hereby granted, free of charge, to any person obtaining a copy
- * of this software and associated documentation files (the "Software"), to deal
- * in the Software without restriction, including without limitation the rights
- * to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
- * copies of the Software, and to permit persons to whom the Software is
- * furnished to do so, subject to the following conditions:
- *
- * The above copyright notice and this permission notice shall be included in
- * all copies or substantial portions of the Software.
- *
- * THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
- * IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
- * FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
- * AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
- * LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
- * OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
- * THE SOFTWARE.
- *
- */
+* The MIT License (MIT)
+*
+* Copyright (c) 2019 Ha Thach (tinyusb.org)
+*
+* Permission is hereby granted, free of charge, to any person obtaining a copy
+* of this software and associated documentation files (the "Software"), to deal
+* in the Software without restriction, including without limitation the rights
+* to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+* copies of the Software, and to permit persons to whom the Software is
+* furnished to do so, subject to the following conditions:
+*
+* The above copyright notice and this permission notice shall be included in
+* all copies or substantial portions of the Software.
+*
+* THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+* IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+* FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+* AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+* LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+* OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
+* THE SOFTWARE.
+*
+*/
 
 #ifndef TUSB_CONFIG_H_
 #define TUSB_CONFIG_H_
 
 #ifdef __cplusplus
- extern "C" {
+extern "C" {
 #endif
 
 //--------------------------------------------------------------------+
@@ -85,13 +85,6 @@
 #define CFG_TUH_RPI_PIO_USB   1
 #endif
 
-/* USB DMA on some MCUs can only access a specific SRAM region with restriction on alignment.
- * Tinyusb use follows macros to declare transferring memory so that they can be put
- * into those specific section.
- * e.g
- * - CFG_TUSB_MEM SECTION : __attribute__ (( section(".usb_ram") ))
- * - CFG_TUSB_MEM_ALIGN   : __attribute__ ((aligned(4)))
- */
 #ifndef CFG_TUD_MEM_SECTION
 #define CFG_TUD_MEM_SECTION
 #endif
@@ -109,7 +102,10 @@
 #endif
 
 //------------- CLASS -------------//
-#define CFG_TUD_CDC              1
+// CDC
+
+#ifdef PROXY_DEBUG
+#define CFG_TUD_CDC     1
 
 // CDC FIFO size of TX and RX
 #define CFG_TUD_CDC_RX_BUFSIZE   (TUD_OPT_HIGH_SPEED ? 512 : 64)
@@ -119,6 +115,14 @@
 // Larger RX_EPSIZE requires CFG_TUD_CDC_RX_NEED_ZLP = 1 and host ZLP support
 #define CFG_TUD_CDC_RX_EPSIZE  (TUD_OPT_HIGH_SPEED ? 512 : 64)
 #define CFG_TUD_CDC_TX_EPSIZE  (TUD_OPT_HIGH_SPEED ? 512 : 64)
+
+#else
+#define CFG_TUD_CDC     0
+#endif
+
+// HID
+#define CFG_TUD_HID 1
+#define CFG_TUD_HID_EP_BUFSIZE    16
 
 //--------------------------------------------------------------------
 // HOST CONFIGURATION
@@ -144,7 +148,7 @@
 #define CFG_TUH_HID_EPOUT_BUFSIZE   64
 
 #ifdef __cplusplus
- }
+}
 #endif
 
 #endif
