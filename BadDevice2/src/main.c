@@ -8,7 +8,7 @@
 #define LED_PIN 11
 #define GPIO_BTN_1 26
 #define GPIO_BTN_2 27
-#define DEBOUNCE_MS 50
+#define DEBOUNCE_MS 150
 
 /*Globals*/
 volatile uint32_t last_key_btn1 = 0;
