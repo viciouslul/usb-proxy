@@ -8,7 +8,7 @@
 #define LED_PIN 11
 #define GPIO_BTN_1 26
 #define GPIO_BTN_2 27
-#define DEBOUNCE_MS 100
+#define DEBOUNCE_MS 50
 
 /*Globals*/
 volatile uint32_t last_key_btn1 = 0;
@@ -54,27 +54,24 @@ void tud_resume_cb(void)
     //do something
 }
 
-bool debounce(volatile uint32_t* key)
-{
-    uint32_t ms = board_millis();
-    if((ms - *key) >= DEBOUNCE_MS)
-    {
-        return true;
-    }
-    return false;
-}
-
 void gpio_callback(uint gpio, uint32_t events)
 {
+    uint32_t now = board_millis();
     if(gpio == GPIO_BTN_1)
     {
-        last_key_btn1 = board_millis();
-        handle_btn1 = 1;
+        if((now - last_key_btn1) >= DEBOUNCE_MS)
+        {
+            handle_btn1 = 1;
+            last_key_btn1 = now;
+        }
     }
     else if(gpio == GPIO_BTN_2)
     {
-        last_key_btn2 = board_millis();
-        handle_btn2 = 1;
+        if((now - last_key_btn2) >= DEBOUNCE_MS)
+        {
+            handle_btn2 = 1;
+            last_key_btn2 = now;
+        }
     }
 }
 
@@ -105,19 +102,13 @@ int main()
     {
         if (handle_btn1)
         {
-            if (debounce(&last_key_btn1))
-            {
-                fillPayload("\x01rcmd\n\x02"); //windows
-                handle_btn1 = 0;
-            }
+            fillPayload("u got rekt"); //linux
+            handle_btn1 = 0;
         }
         if (handle_btn2)
         {
-            if (debounce(&last_key_btn2))
-            {
-                reEnumerate();
-                handle_btn2 = 0;
-            }
+            reEnumerate();
+            handle_btn2 = 0;
         }
 
         tud_task();

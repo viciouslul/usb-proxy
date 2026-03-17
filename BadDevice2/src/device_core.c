@@ -111,4 +111,3 @@ void hid_task(void)
     tud_hid_keyboard_report(REPORT_ID_KEYBOARD, report.modifier, report.keycode);
     key_down = true;
 }
-
