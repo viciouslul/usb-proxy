@@ -28,47 +28,41 @@ void tuh_hid_mount_cb(uint8_t dev_addr, uint8_t instance, uint8_t const* desc_re
     (void) desc_report;
     (void) desc_len;
 
+    // Interface protocol (hid_interface_protocol_enum_t)
     uint8_t const itf_protocol = tuh_hid_interface_protocol(dev_addr, instance);
+
     uint16_t vid, pid;
     tuh_vid_pid_get(dev_addr, &vid, &pid);
 
-    // 1. Send the mount packet to your proxy queue
     proxy_packet_t pkt;
     pkt.hid_msg = PROXY_MSG_MOUNT;
     pkt.hid_device = get_device_type(itf_protocol);
     pkt.timestamp_us = time_us_32();
-    pkt.report_len = 0; 
-    (void) proxy_enqueue(&pkt);
+    pkt.report_len = 0; /* Send pid and vid? */
+    (void) proxy_enqueue(&pkt); /* Can check if successful or not */
 
-    #ifdef PROXY_DEBUG
+#ifdef PROXY_DEBUG
     const char* protocol_str[] = {"None", "Keyboard", "Mouse"};
     char tempbuf[256];
-    // Note: ensure itf_protocol doesn't exceed index 2
     int count = sprintf(
-        tempbuf, "[%04x:%04x][%u] HID Interface%u, Protocol = %s\r\n", 
-        vid, pid, dev_addr, instance, protocol_str[itf_protocol <= 2 ? itf_protocol : 0]);
+        tempbuf, "[%04x:%04x][%u] HID Interface%u, Protocol = %s\r\n", vid, pid, dev_addr, instance,
+        protocol_str[itf_protocol]);
     tud_cdc_write(tempbuf, (uint32_t) count);
     tud_cdc_write_flush();
-    #endif
+#endif
 
-    // 2. FORCE Boot Protocol if it's a keyboard or mouse
-    // This makes sure the device sends the standard 8-byte format your code expects
-    if (itf_protocol == HID_ITF_PROTOCOL_KEYBOARD || itf_protocol == HID_ITF_PROTOCOL_MOUSE) 
+    if (itf_protocol == HID_ITF_PROTOCOL_KEYBOARD || itf_protocol == HID_ITF_PROTOCOL_MOUSE)
     {
         tuh_hid_set_protocol(dev_addr, instance, HID_PROTOCOL_BOOT);
     }
 
-    // 3. Request the first report
-    // FIXED: Explicitly checking each condition so HID_ITF_PROTOCOL_NONE (0) is included
-    if (itf_protocol == HID_ITF_PROTOCOL_KEYBOARD || 
-        itf_protocol == HID_ITF_PROTOCOL_MOUSE    || 
-        itf_protocol == HID_ITF_PROTOCOL_NONE)
+    // Receive report from boot keyboard & mouse only
+    // tuh_hid_report_received_cb() will be invoked when report is available
+    if (!tuh_hid_receive_report(dev_addr, instance))
     {
-        if (!tuh_hid_receive_report(dev_addr, instance)) {
-            #ifdef PROXY_DEBUG
-            tud_cdc_write_str("Error: cannot request report\r\n");
-            #endif
-        }
+    #ifdef PROXY_DEBUG
+        tud_cdc_write_str("Error: cannot request report\r\n");
+    #endif
     }
 }
 
@@ -95,39 +89,42 @@ void tuh_hid_umount_cb(uint8_t dev_addr, uint8_t instance)
 void tuh_hid_report_received_cb(uint8_t dev_addr, uint8_t instance, uint8_t const* report, uint16_t len)
 {
     uint8_t const itf_protocol = tuh_hid_interface_protocol(dev_addr, instance);
-    
-    // Default to using the raw report
-    uint8_t const* p_report = report;
+
+    // Default to use raw report
+    uint8_t const *p_report = report;
     uint16_t r_len = len;
 
-    // SHIFT FIX: If the device is using Report IDs (len 9), 
-    // the actual keyboard data starts at index [1]
-    if (len == 9) {
+    if (r_len > 8)
+    {
         p_report = report + 1;
-        r_len = len - 1;
+        r_len = r_len - 1;
     }
 
-    proxy_device_t dtype = get_device_type(itf_protocol);
-    if (dtype == HID_NONE) dtype = HID_KEYBOARD; 
+    proxy_device_t hid_type = get_device_type(itf_protocol);
 
-    // Debug output using the shifted report
-    if (dtype == HID_KEYBOARD) {
-        #ifdef PROXY_DEBUG
+
+#ifdef PROXY_DEBUG
+    if (hid_type == HID_KEYBOARD)
         debug_kbd_report(dev_addr, (hid_keyboard_report_t const*) p_report);
-        #endif
-    }
+    if (hid_type == HID_MOUSE)
+        debug_mouse_report(dev_addr, (hid_mouse_report_t const*) p_report);
+#endif
 
-    // Queue the shifted data
     proxy_packet_t pkt;
     pkt.hid_msg = PROXY_MSG_REPORT;
-    pkt.hid_device = dtype;
+    pkt.hid_device = hid_type;
     pkt.timestamp_us = time_us_32();
     pkt.report_len = r_len;
     memcpy(pkt.report, p_report, r_len);
     (void) proxy_enqueue(&pkt);
 
-    // Keep the engine running
-    tuh_hid_receive_report(dev_addr, instance);
+    // continue to request to receive report
+    if (!tuh_hid_receive_report(dev_addr, instance))
+    {
+        #ifdef PROXY_DEBUG
+        tud_cdc_write_str("Error: cannot request report\r\n");
+        #endif
+    }
 }
 
 // look up new key in previous keys
