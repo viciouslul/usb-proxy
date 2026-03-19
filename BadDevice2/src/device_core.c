@@ -58,24 +58,28 @@ void fillPayload(const char* inputPayload)
 /*------------------------------------------------------------------*/
 
 #define USB_VID 0xbeef
-#define USB_PID_MSC 0x1338
+#define USB_PID_MSC 0x1339
 
 void reEnumerate(void)
 {
     tud_disconnect();
-
+    sleep_ms(1000);
+    
     is_msc_mode = true;
 
     desc_device.idVendor  = USB_VID;
     desc_device.idProduct = USB_PID_MSC;
-
     string_desc_arr[1] = "change manufacturer";
     string_desc_arr[2] = "change product";
     string_desc_arr[3] = "change serials";
-
     active_config = desc_configuration_msc;
 
-    sleep_ms(100);
+    tud_init(BOARD_TUD_RHPORT);
+    if (board_init_after_tusb)
+    {
+        board_init_after_tusb();
+    }
+
     tud_connect();
 }
 

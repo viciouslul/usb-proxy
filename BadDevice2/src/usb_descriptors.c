@@ -103,8 +103,8 @@ enum
 #define MSC_CONFIG_TOTAL_LEN  (TUD_CONFIG_DESC_LEN + TUD_MSC_DESC_LEN)
 
 #define EPNUM_HID 0x81
-#define EPNUM_MSC_OUT 0x02
-#define EPNUM_MSC_IN  0x82
+#define EPNUM_MSC_OUT 0x05
+#define EPNUM_MSC_IN  0x85
 
 uint8_t const desc_configuration_hid[] =
     {
@@ -120,7 +120,8 @@ uint8_t const desc_configuration_msc[] =
         TUD_CONFIG_DESCRIPTOR(1, ITF_NUM_MSC_TOTAL, 0, MSC_CONFIG_TOTAL_LEN, TUSB_DESC_CONFIG_ATT_REMOTE_WAKEUP, 100),
         
         // Interface number, string index, EP Out & EP In address, EP size
-        TUD_MSC_DESCRIPTOR(ITF_NUM_MSC, 5, EPNUM_MSC_OUT, EPNUM_MSC_IN, 512),};
+        TUD_MSC_DESCRIPTOR(ITF_NUM_MSC, 0, EPNUM_MSC_OUT, EPNUM_MSC_IN, CFG_TUD_MSC_EP_BUFSIZE),
+    };
 
 
 // Invoked when received GET CONFIGURATION DESCRIPTOR
