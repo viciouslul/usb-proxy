@@ -147,6 +147,8 @@ extern "C" {
 #define CFG_TUH_HID_EPIN_BUFSIZE    64
 #define CFG_TUH_HID_EPOUT_BUFSIZE   64
 
+#define CFG_TUH_MSC                 1
+
 #ifdef __cplusplus
 }
 #endif

@@ -17,12 +17,12 @@ void process_hid()
     while(proxy_dequeue(&pkt))
     {
         //botDetection(&pkt);
-        switch(pkt.hid_msg)
+        switch(pkt.msg_t)
         {
             case PROXY_MSG_REPORT:
-                if(pkt.hid_device == HID_KEYBOARD)
+                if(pkt.dev_t == HID_KEYBOARD)
                 {
-                    tud_hid_report(pkt.hid_device, pkt.report, pkt.report_len);
+                    tud_hid_report(pkt.dev_t, pkt.report, pkt.report_len);
                     #ifdef PROXY_DEBUG
                     if (pkt.report[2] != 0x00)
                     {
@@ -30,9 +30,9 @@ void process_hid()
                     }
                     #endif
                 }
-                else if(pkt.hid_device == HID_MOUSE)
+                else if(pkt.dev_t == HID_MOUSE)
                 {
-                    tud_hid_report(pkt.hid_device, pkt.report, pkt.report_len);
+                    tud_hid_report(pkt.dev_t, pkt.report, pkt.report_len);
                 }
                 break;
 
