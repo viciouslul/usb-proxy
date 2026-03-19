@@ -112,13 +112,13 @@ uint8_t const desc_configuration_hid[] =
         TUD_CONFIG_DESCRIPTOR(1, ITF_NUM_HID_TOTAL, 0, HID_CONFIG_TOTAL_LEN, TUSB_DESC_CONFIG_ATT_REMOTE_WAKEUP, 100),
 
         // Interface number, string index, protocol, report descriptor len, EP In address, size & polling interval
-        TUD_HID_DESCRIPTOR(ITF_NUM_HID, 0, HID_ITF_PROTOCOL_NONE, sizeof(desc_hid_report), EPNUM_HID, CFG_TUD_HID_EP_BUFSIZE, 5)};
+        TUD_HID_DESCRIPTOR(ITF_NUM_HID, 0, HID_ITF_PROTOCOL_KEYBOARD, sizeof(desc_hid_report), EPNUM_HID, CFG_TUD_HID_EP_BUFSIZE, 5)};
 
 uint8_t const desc_configuration_msc[] =
     {
         // Config number, interface count, string index, total length, attribute, power in mA
         TUD_CONFIG_DESCRIPTOR(1, ITF_NUM_MSC_TOTAL, 0, MSC_CONFIG_TOTAL_LEN, TUSB_DESC_CONFIG_ATT_REMOTE_WAKEUP, 100),
-        
+
         // Interface number, string index, EP Out & EP In address, EP size
         TUD_MSC_DESCRIPTOR(ITF_NUM_MSC, 5, EPNUM_MSC_OUT, EPNUM_MSC_IN, 512),};
 
@@ -144,9 +144,9 @@ uint8_t const *tud_descriptor_configuration_cb(uint8_t index)
 char const *string_desc_arr[] =
     {
         (const char[]){0x09, 0x04}, // 0: is supported language is English (0x0409)
-        "rktrlng",                  // 1: Manufacturer
-        "TinyUSB keyboard",         // 2: Product
-        "123456",                   // 3: Serials, should use chip ID
+        "TinyUSB",                  // 1: Manufacturer
+        "BAD HID",                  // 2: Product
+        "0420",                     // 3: Serials, should use chip ID
 };
 
 static uint16_t _desc_str[32];

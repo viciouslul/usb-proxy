@@ -4,6 +4,7 @@
 #include "tusb.h"
 #include "bsp/board_api.h"
 #include "usb_descriptors.h"
+#include "device_core.h"
 
 #define LED_PIN 11
 #define GPIO_BTN_1 26
@@ -102,12 +103,19 @@ int main()
     {
         if (handle_btn1)
         {
-            fillPayload("u got rekt"); //linux
+            fillPayload("u got rekt\n"); //linux
             handle_btn1 = 0;
         }
         if (handle_btn2)
         {
-            reEnumerate();
+            if (current_dev == MSC)
+            {
+                reEnumerate(HID);
+            }
+            else
+            {
+                reEnumerate(MSC);
+            }
             handle_btn2 = 0;
         }
 
