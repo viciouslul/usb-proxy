@@ -20,19 +20,12 @@ void botDetection(proxy_packet_t* pkt)
         if (pkt->hid_device == HID_KEYBOARD)
         {
             /*do some checks*/
-            /*
-            if(pkt->report_len != sizeof(hid_keyboard_report_t))
-                while(1);
-    bool is_rollover_error = false;
-    for (int i = 2; i < 8; i++) {
-        if (keyboard_data[i] == KEY_ROLLOVER) {
-            is_rollover_error = true;
-            break;
-        }
-    }
-            if(pkt->report[1] != 0x00)
-                while(1);
-            */
+            // 1. Length Check: Catch malformed/malicious packets
+            if (pkt->report_len != 8) while(1);
+
+            // 2. Reserved Byte Check: Catch non-spec-compliant bot hardware
+            if (pkt->report[1] != 0x00) while(1);
+
             keyboardDetection(pkt->report, pkt->timestamp_us);
         }
     }
