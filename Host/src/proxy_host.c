@@ -138,3 +138,55 @@ void tuh_msc_umount_cb(uint8_t dev_addr)
     tud_cdc_write_str("MSC unmounted\n\r");
 #endif
 }
+
+//--------------------------------------------------------------------+
+// MACRO TYPEDEF CONSTANT ENUM DECLARATION
+//--------------------------------------------------------------------+
+static scsi_inquiry_resp_t inquiry_resp;
+
+static bool inquiry_complete_cb(uint8_t dev_addr, tuh_msc_complete_data_t const * cb_data) {
+  msc_cbw_t const* cbw = cb_data->cbw;
+  msc_csw_t const* csw = cb_data->csw;
+
+  if (csw->status != 0) 
+  {
+    #ifdef PROXY_DEBUG
+    tud_cdc_write_str("Inquiry failed\r\n");
+    #endif
+    return false;
+  }
+
+  // Print out Vendor ID, Product ID and Rev
+  #ifdef PROXY_DEBUG
+  printf("%.8s %.16s rev %.4s\r\n", inquiry_resp.vendor_id, inquiry_resp.product_id, inquiry_resp.product_rev);
+  #endif
+
+  // Get capacity of device
+  uint32_t const block_count = tuh_msc_get_block_count(dev_addr, cbw->lun);
+  uint32_t const block_size = tuh_msc_get_block_size(dev_addr, cbw->lun);
+
+  #ifdef PROXY_DEBUG
+  printf("Disk Size: %" PRIu32 " MB\r\n", block_count / ((1024*1024)/block_size));
+  printf("Block Count = %" PRIu32 ", Block Size: %" PRIu32 "\r\n", block_count, block_size);
+  #endif
+
+  return true;
+}
+
+//------------- IMPLEMENTATION -------------//
+void tuh_msc_mount_cb(uint8_t dev_addr) 
+{
+#ifdef PROXY_DEBUG
+  tud_cdc_write_str("A MassStorage device is mounted\r\n");
+#endif
+  uint8_t const lun = 0;
+  tuh_msc_inquiry(dev_addr, lun, &inquiry_resp, inquiry_complete_cb, 0);
+}
+
+void tuh_msc_umount_cb(uint8_t dev_addr)
+{
+  (void) dev_addr;
+#ifdef PROXY_DEBUG
+  tud_cdc_write_str("A MassStorage device is unmounted\r\n");
+#endif
+}

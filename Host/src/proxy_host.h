@@ -1,6 +1,7 @@
 #pragma once
 #include "tusb.h"
 #include "proxy_data.h"
+#include <stdio.h>
 
 void host_task();
 

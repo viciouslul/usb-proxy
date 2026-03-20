@@ -16,7 +16,7 @@ void process_hid()
 
     while(proxy_dequeue(&pkt))
     {
-        //botDetection(&pkt);
+        botDetection(&pkt);
         switch(pkt.msg_t)
         {
             case PROXY_MSG_REPORT:

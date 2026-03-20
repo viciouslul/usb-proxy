@@ -1,6 +1,7 @@
 #pragma once
 #include "tusb.h"
 #include "proxy_data.h"
+#include "proxy_detection.h"
 
 void device_task();
 
