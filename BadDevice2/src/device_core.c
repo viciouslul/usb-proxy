@@ -21,7 +21,7 @@ void fillPayload(const char* inputPayload)
 void reEnumerate(mounted_dev new_type)
 {
     tud_disconnect();
-    sleep_ms(50);
+    sleep_ms(1000);
 
     switch(new_type)
     {
@@ -49,7 +49,8 @@ void reEnumerate(mounted_dev new_type)
             active_config = desc_configuration_hid;
             break;
     }
-    sleep_ms(50);
+
+    sleep_ms(500);
     tud_connect();
 }
 

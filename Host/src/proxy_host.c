@@ -122,23 +122,6 @@ void tuh_hid_report_received_cb(uint8_t dev_addr, uint8_t instance, uint8_t cons
     }
 }
 
-/*--------- MSC ---------*/
-void tuh_msc_mount_cb(uint8_t dev_addr)
-{
-    (void) dev_addr;
-#ifdef PROXY_DEBUG
-    tud_cdc_write_str("MSC mounted\n\r");
-#endif
-}
-
-void tuh_msc_umount_cb(uint8_t dev_addr)
-{
-    (void) dev_addr;
-#ifdef PROXY_DEBUG
-    tud_cdc_write_str("MSC unmounted\n\r");
-#endif
-}
-
 //--------------------------------------------------------------------+
 // MACRO TYPEDEF CONSTANT ENUM DECLARATION
 //--------------------------------------------------------------------+

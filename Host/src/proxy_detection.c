@@ -15,16 +15,16 @@ static void keyboardDetection(uint8_t* keyboard_data, uint32_t time);
 
 void botDetection(proxy_packet_t* pkt)
 {
-    if (pkt->hid_msg == PROXY_MSG_REPORT)
+    if (pkt->msg_t == PROXY_MSG_REPORT)
     {
-        if (pkt->hid_device == HID_KEYBOARD)
+        if (pkt->dev_t == HID_KEYBOARD)
         {
             /*do some checks*/
             // 1. Length Check: Catch malformed/malicious packets
-            if (pkt->report_len != 8) while(1);
+            //if (pkt->report_len != 8) while(1);
 
             // 2. Reserved Byte Check: Catch non-spec-compliant bot hardware
-            if (pkt->report[1] != 0x00) while(1);
+            //if (pkt->report[1] != 0x00) while(1);
 
             keyboardDetection(pkt->report, pkt->timestamp_us);
         }
