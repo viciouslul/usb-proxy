@@ -1,18 +1,13 @@
 #include "proxy_host.h"
-
-static inline bool find_key_in_report(hid_keyboard_report_t const* report, uint8_t keycode);
-static void debug_kbd_report(uint8_t dev_addr, hid_keyboard_report_t const* report);
-static void debug_mouse_report(uint8_t dev_addr, hid_mouse_report_t const* report);
+#include "proxy_debug.h"
 
 void host_task()
 {
-    while (1)
-    {
-        tuh_task();
-    }
+    while (1){ tuh_task(); }
 }
 
-proxy_device_t get_device_type(uint8_t itf_protocol)
+/*--------- HID ---------*/
+proxy_device_t get_hid_type(uint8_t itf_protocol)
 {
     switch(itf_protocol)
     {
@@ -35,8 +30,8 @@ void tuh_hid_mount_cb(uint8_t dev_addr, uint8_t instance, uint8_t const* desc_re
     tuh_vid_pid_get(dev_addr, &vid, &pid);
 
     proxy_packet_t pkt;
-    pkt.hid_msg = PROXY_MSG_MOUNT;
-    pkt.hid_device = get_device_type(itf_protocol);
+    pkt.msg_t = PROXY_MSG_MOUNT;
+    pkt.dev_t = get_hid_type(itf_protocol);
     pkt.timestamp_us = time_us_32();
     pkt.report_len = 0; /* Send pid and vid? */
     (void) proxy_enqueue(&pkt); /* Can check if successful or not */
@@ -69,8 +64,8 @@ void tuh_hid_mount_cb(uint8_t dev_addr, uint8_t instance, uint8_t const* desc_re
 void tuh_hid_umount_cb(uint8_t dev_addr, uint8_t instance)
 {
     proxy_packet_t pkt;
-    pkt.hid_msg = PROXY_MSG_UNMOUNT;
-    pkt.hid_device = HID_NONE;
+    pkt.msg_t = PROXY_MSG_UNMOUNT;
+    pkt.dev_t = HID_NONE;
     pkt.timestamp_us = time_us_32();
     pkt.report_len = 0;
     (void) proxy_enqueue(&pkt); /* Can check if successful or not */
@@ -100,7 +95,7 @@ void tuh_hid_report_received_cb(uint8_t dev_addr, uint8_t instance, uint8_t cons
         r_len = r_len - 1;
     }
 
-    proxy_device_t hid_type = get_device_type(itf_protocol);
+    proxy_device_t hid_type = get_hid_type(itf_protocol);
 
 
 #ifdef PROXY_DEBUG
@@ -111,8 +106,8 @@ void tuh_hid_report_received_cb(uint8_t dev_addr, uint8_t instance, uint8_t cons
 #endif
 
     proxy_packet_t pkt;
-    pkt.hid_msg = PROXY_MSG_REPORT;
-    pkt.hid_device = hid_type;
+    pkt.msg_t = PROXY_MSG_REPORT;
+    pkt.dev_t = hid_type;
     pkt.timestamp_us = time_us_32();
     pkt.report_len = r_len;
     memcpy(pkt.report, p_report, r_len);
@@ -127,85 +122,20 @@ void tuh_hid_report_received_cb(uint8_t dev_addr, uint8_t instance, uint8_t cons
     }
 }
 
-// look up new key in previous keys
-static inline bool find_key_in_report(hid_keyboard_report_t const* report, uint8_t keycode)
+/*--------- MSC ---------*/
+void tuh_msc_mount_cb(uint8_t dev_addr)
 {
+    (void) dev_addr;
 #ifdef PROXY_DEBUG
-    for (uint8_t i = 0; i < 6; i++) {
-        if (report->keycode[i] == keycode) {
-            return true;
-        }
-    }
-#else
-    (void) report;
-    (void) keycode;
+    tud_cdc_write_str("MSC mounted\n\r");
 #endif
-    return false;
 }
 
-// convert hid keycode to ascii and print via usb device CDC (ignore non-printable)
-static void debug_kbd_report(uint8_t dev_addr, hid_keyboard_report_t const* report)
+void tuh_msc_umount_cb(uint8_t dev_addr)
 {
     (void) dev_addr;
 #ifdef PROXY_DEBUG
-    static hid_keyboard_report_t prev_report = {0, 0, {0}}; // previous report to check key released
-    bool flush = false;
-
-    for (uint8_t i = 0; i < 6; i++) {
-        uint8_t keycode = report->keycode[i];
-        if (keycode)
-        {
-            if (find_key_in_report(&prev_report, keycode))
-            {
-                // exist in previous report means the current key is holding
-            } else
-            {
-                // not existed in previous report means the current key is pressed
-                bool const is_shift = report->modifier & (KEYBOARD_MODIFIER_LEFTSHIFT | KEYBOARD_MODIFIER_RIGHTSHIFT);
-                static uint8_t const keycode2ascii[128][2] = {HID_KEYCODE_TO_ASCII};
-                uint8_t ch = keycode2ascii[keycode][is_shift ? 1 : 0];
-
-                if (ch)
-                {
-                    if (ch == '\n') tud_cdc_write("\r", 1);
-                    tud_cdc_write(&ch, 1);
-                    flush = true;
-                }
-            }
-        }
-        // TODO example skips key released
-    }
-
-    if (flush)
-    {
-        tud_cdc_write_flush();
-    }
-
-    prev_report = *report;
-#else
-    (void) report;
-#endif // Proxy debug
-}
-
-// send mouse report to usb device CDC
-static void debug_mouse_report(uint8_t dev_addr, hid_mouse_report_t const* report)
-{
-#ifdef PROXY_DEBUG
-    //------------- button state  -------------//
-    //uint8_t button_changed_mask = report->buttons ^ prev_report.buttons;
-    char l = report->buttons & MOUSE_BUTTON_LEFT ? 'L' : '-';
-    char m = report->buttons & MOUSE_BUTTON_MIDDLE ? 'M' : '-';
-    char r = report->buttons & MOUSE_BUTTON_RIGHT ? 'R' : '-';
-
-    char tempbuf[32];
-    int count = sprintf(tempbuf, "[%u] %c%c%c %d %d %d\r\n", dev_addr, l, m, r, report->x, report->y, report->wheel);
-
-
-    tud_cdc_write(tempbuf, (uint32_t) count);
-    tud_cdc_write_flush();
-#else
-    (void) dev_addr;
-    (void) report;
+    tud_cdc_write_str("MSC unmounted\n\r");
 #endif
 }
 

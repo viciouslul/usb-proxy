@@ -14,12 +14,13 @@ typedef enum {
 typedef enum {
     HID_NONE = 0,
     HID_KEYBOARD,
-    HID_MOUSE
+    HID_MOUSE,
+    MSC
 } proxy_device_t;
 
 typedef struct {
-    proxy_msg_t hid_msg;
-    proxy_device_t hid_device;
+    proxy_msg_t msg_t;
+    proxy_device_t dev_t;
     uint32_t timestamp_us;
 
     uint16_t report_len;

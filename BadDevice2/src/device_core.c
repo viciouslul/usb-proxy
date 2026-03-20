@@ -4,45 +4,10 @@
 #include "bsp/board_api.h"
 #include "usb_descriptors.h"
 #include <string.h>
+#include "stdlib.h"
+#include "hardware/structs/usb.h"
 
-/*------------------------------------------------------------------*/
-/* Globals */
-/*------------------------------------------------------------------*/
-
-static const char *payload = "";
-static int payload_index = 0;
-static int payload_len = 0;
-static bool sent = false;
-
-static uint32_t last_event = 0;
-
-static bool is_msc_mode = false;
-
-extern tusb_desc_device_t desc_device;
-extern uint8_t const desc_configuration_msc[];
-extern uint8_t const desc_configuration_hid[];
-extern uint8_t const *active_config;
-extern char const *string_desc_arr[];
-
-/* ASCII → HID lookup table */
 uint8_t const ascii_to_keycode[128][2] = { HID_ASCII_TO_KEYCODE };
-
-/*------------------------------------------------------------------*/
-/* HID state machine */
-/*------------------------------------------------------------------*/
-
-typedef enum {
-    STATE_IDLE,
-    STATE_KEY_DOWN,
-    STATE_KEY_UP,
-    STATE_DELAY
-} hid_state_t;
-
-static hid_state_t state = STATE_IDLE;
-
-/*------------------------------------------------------------------*/
-/* Payload control */
-/*------------------------------------------------------------------*/
 
 void fillPayload(const char* inputPayload)
 {
@@ -53,43 +18,44 @@ void fillPayload(const char* inputPayload)
     state = STATE_KEY_DOWN;
 }
 
-/*------------------------------------------------------------------*/
-/* USB re-enumeration (MSC switch) */
-/*------------------------------------------------------------------*/
-
-#define USB_VID 0xbeef
-#define USB_PID_MSC 0x1339
-
-void reEnumerate(void)
+void reEnumerate(mounted_dev new_type)
 {
     tud_disconnect();
-    sleep_ms(1000);
-    
-    is_msc_mode = true;
+    sleep_ms(50);
 
-    desc_device.idVendor  = USB_VID;
-    desc_device.idProduct = USB_PID_MSC;
-    string_desc_arr[1] = "change manufacturer";
-    string_desc_arr[2] = "change product";
-    string_desc_arr[3] = "change serials";
-    active_config = desc_configuration_msc;
-
-    tud_init(BOARD_TUD_RHPORT);
-    if (board_init_after_tusb)
+    switch(new_type)
     {
-        board_init_after_tusb();
-    }
+        case MSC:
+            current_dev = MSC;
+            desc_device.idVendor  = USB_VID_MSC;
+            desc_device.idProduct = USB_PID_MSC;
 
+            string_desc_arr[1] = "TinyUSB";
+            string_desc_arr[2] = "BAD MSC";
+            string_desc_arr[3] = "1337";
+
+            active_config = desc_configuration_msc;
+            break;
+
+        case HID:
+            current_dev = HID;
+            desc_device.idVendor  = USB_VID_HID;
+            desc_device.idProduct = USB_PID_HID;
+
+            string_desc_arr[1] = "TinyUSB";
+            string_desc_arr[2] = "BAD HID";
+            string_desc_arr[3] = "0420";
+
+            active_config = desc_configuration_hid;
+            break;
+    }
+    sleep_ms(50);
     tud_connect();
 }
 
-/*------------------------------------------------------------------*/
-/* HID task */
-/*------------------------------------------------------------------*/
-
 void hid_task(void)
 {
-    if (is_msc_mode) return;
+    if (current_dev == MSC) return;
     if (!tud_mounted()) return;
     if (sent) return;
 
