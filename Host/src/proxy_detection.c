@@ -14,11 +14,27 @@ static void mouseDetection(uint8_t* mouse_data);
 static void keyboardDetection(uint8_t* keyboard_data, uint32_t time);
 
 void botDetection(proxy_packet_t* pkt)
-{
+{  
+#ifdef PROXY_DEBUG
+#endif
     if (pkt->msg_t == PROXY_MSG_REPORT)
     {
         if (pkt->dev_t == HID_KEYBOARD)
         {
+            /****Debug things***
+            tud_cdc_write_str("We are in botDetection, why?\r\n");
+            char buf[64];
+            sprintf(buf, "report_len: %u\r\n", pkt->report_len);
+            tud_cdc_write(buf, strlen(buf));
+            tud_cdc_write_flush();
+
+            sprintf(buf, "report: %02x %02x %02x %02x %02x %02x %02x %02x\r\n",
+                pkt->report[0], pkt->report[1], pkt->report[2], pkt->report[3],
+                pkt->report[4], pkt->report[5], pkt->report[6], pkt->report[7]);
+            tud_cdc_write(buf, strlen(buf));
+            tud_cdc_write_flush();
+            */
+
             /*do some checks*/
             // 1. Length Check: Catch malformed/malicious packets
             //if (pkt->report_len != 8) while(1);
@@ -120,4 +136,15 @@ static void keyboardDetection(uint8_t* keyboard_data, uint32_t time)
 
     // Always update the previous report for the next comparison
     memcpy(kb_prev_report, keyboard_data, 8);
+}
+
+void botDetection_reset(void)
+{
+    kb_last         = 0;
+    mouse_last      = 0;
+    kb_prev_keycode = 0x00;
+    kb_history_idx  = 0;
+    strike_count    = 0;
+    memset(kb_prev_report, 0, sizeof(kb_prev_report));
+    memset(kb_history,     0, sizeof(kb_history));
 }

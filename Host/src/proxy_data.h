@@ -58,3 +58,10 @@ static inline bool proxy_dequeue(proxy_packet_t *pkt)
 
     return true;
 }
+
+static inline void proxy_queue_reset(void)
+{
+    proxy_queue.head = 0;
+    proxy_queue.tail = 0;
+    memset(proxy_queue.buffer, 0, sizeof(proxy_queue.buffer));
+}

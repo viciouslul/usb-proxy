@@ -29,7 +29,7 @@ void tuh_hid_mount_cb(uint8_t dev_addr, uint8_t instance, uint8_t const* desc_re
     uint16_t vid, pid;
     tuh_vid_pid_get(dev_addr, &vid, &pid);
 
-    proxy_packet_t pkt;
+    proxy_packet_t pkt = {0};
     pkt.msg_t = PROXY_MSG_MOUNT;
     pkt.dev_t = get_hid_type(itf_protocol);
     pkt.timestamp_us = time_us_32();
@@ -63,7 +63,7 @@ void tuh_hid_mount_cb(uint8_t dev_addr, uint8_t instance, uint8_t const* desc_re
 
 void tuh_hid_umount_cb(uint8_t dev_addr, uint8_t instance)
 {
-    proxy_packet_t pkt;
+    proxy_packet_t pkt = {0};
     pkt.msg_t = PROXY_MSG_UNMOUNT;
     pkt.dev_t = HID_NONE;
     pkt.timestamp_us = time_us_32();
