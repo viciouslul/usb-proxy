@@ -1,5 +1,4 @@
 #pragma once
-
 #include <stdint.h>
 #include "proxy_data.h"
 #include "tusb.h"
@@ -11,6 +10,8 @@
 #define BOT_KB_MIN_INTERVAL_MS 50
 #define hid_keyboard_report_t 8
 
+
 void botDetection(proxy_packet_t* pkt);
+void botDetection_reset(void);
 
 

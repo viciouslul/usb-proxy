@@ -16,7 +16,7 @@ void process_hid()
 
     while(proxy_dequeue(&pkt))
     {
-        //botDetection(&pkt);
+        botDetection(&pkt);
         switch(pkt.msg_t)
         {
             case PROXY_MSG_REPORT:
@@ -41,7 +41,8 @@ void process_hid()
                 break;
 
             case PROXY_MSG_UNMOUNT:
-                //handle unmount
+                botDetection_reset(); //just reset everything in detection when we unmount
+                proxy_queue_reset(); //also just reset the queue
                 break;
 
             case PROXY_MSG_NONE:
