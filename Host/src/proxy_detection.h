@@ -13,5 +13,6 @@
 
 void botDetection(proxy_packet_t* pkt);
 void botDetection_reset(void);
+void enumerationCheck(proxy_packet_t* pkt);
 
 

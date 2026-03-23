@@ -14,7 +14,7 @@ static void mouseDetection(uint8_t* mouse_data);
 static void keyboardDetection(uint8_t* keyboard_data, uint32_t time);
 
 void botDetection(proxy_packet_t* pkt)
-{  
+{
 #ifdef PROXY_DEBUG
 #endif
     if (pkt->msg_t == PROXY_MSG_REPORT)
@@ -94,7 +94,6 @@ static void keyboardDetection(uint8_t* keyboard_data, uint32_t time)
         }
     }
 
-
     // 2. Only process if it's a fresh key press event
     if(new_key && any_key_down)
     {
@@ -124,7 +123,7 @@ static void keyboardDetection(uint8_t* keyboard_data, uint32_t time)
                 if (avg < BOT_AVG_THRESHOLD && spread < MIN_SPREAD_THRESHOLD)
                 {
                     memset(kb_history, 0, sizeof(kb_history));
-                    if (strike_count++ >= 3) while(1);
+                    if (strike_count++ >= 3) current_screen = SCREEN_ERROR;
                 }
             }
         }
@@ -147,4 +146,38 @@ void botDetection_reset(void)
     strike_count    = 0;
     memset(kb_prev_report, 0, sizeof(kb_prev_report));
     memset(kb_history,     0, sizeof(kb_history));
+}
+
+void enumerationCheck(proxy_packet_t* pkt)
+{
+    if (pkt->msg_t == PROXY_MSG_MOUNT)
+    {
+        switch(pkt->dev_t)
+        {
+            case HID_KEYBOARD:
+                if (device_selected != SCREEN_KEYBOARD)
+                {
+                    current_screen = SCREEN_ERROR;
+                }
+                break;
+
+            case HID_MOUSE:
+                if (device_selected != SCREEN_MOUSE)
+                {
+                    current_screen = SCREEN_ERROR;
+                }
+                break;
+
+            case MSC:
+                if (device_selected != SCREEN_MSC)
+                {
+                    current_screen = SCREEN_ERROR;
+                }
+                break;
+
+        default:
+            current_screen = SCREEN_ERROR;
+            break;
+        }
+    }
 }

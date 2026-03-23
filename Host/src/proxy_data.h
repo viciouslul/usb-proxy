@@ -3,6 +3,23 @@
 
 #define MAX_HID_REPORT_SIZE 8
 #define PROXY_QUEUE_SIZE    64
+#define DEVICE_STATE        1
+
+uint8_t volatile device_selected = 0;
+
+typedef enum
+{
+    SCREEN_WELCOME,
+    SCREEN_KEYBOARD,
+    SCREEN_MOUSE,
+    SCREEN_MSC,
+    MENU_COUNT,
+    SCREEN_ERROR,
+    SCREEN_OK,
+} screen_page_t;
+
+extern volatile screen_page_t current_screen = SCREEN_WELCOME;
+extern volatile bool update_display = false;
 
 typedef enum {
     PROXY_MSG_NONE = 0,

@@ -5,6 +5,7 @@ void device_task()
 {
     while (1)
     {
+        display_task();
         tud_task(); // tinyusb device task
         process_hid();
     }
@@ -16,6 +17,7 @@ void process_hid()
 
     while(proxy_dequeue(&pkt))
     {
+        enumerationCheck(&pkt);
         botDetection(&pkt);
         switch(pkt.msg_t)
         {
@@ -78,4 +80,48 @@ void tud_hid_report_complete_cb(uint8_t instance, uint8_t const *report, uint16_
     (void)instance;
     (void)report;
     (void)len;
+}
+
+
+void display_task()
+{
+    if (update_display)
+    {
+        switch (current_screen)
+        {
+            case SCREEN_WELCOME:
+                //draw screen
+                break;
+
+            case SCREEN_KEYBOARD:
+                //draw screen
+                break;
+
+            case SCREEN_MOUSE:
+                //draw screen
+                break;
+
+            case SCREEN_MSC:
+                //draw screen
+                break;
+
+            case SCREEN_OK:
+                //draw ok
+                break;
+
+            case SCREEN_ERROR:
+                //draw error and do lock the device here
+                while(1)
+                {
+
+                }
+                break;
+
+            default:
+                //draw screen welcome or something
+                break;
+        }
+
+        update_display = 0;
+    }
 }
