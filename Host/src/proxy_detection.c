@@ -123,7 +123,10 @@ static void keyboardDetection(uint8_t* keyboard_data, uint32_t time)
                 if (avg < BOT_AVG_THRESHOLD && spread < MIN_SPREAD_THRESHOLD)
                 {
                     memset(kb_history, 0, sizeof(kb_history));
-                    if (strike_count++ >= 3) current_screen = SCREEN_ERROR;
+                    if (strike_count++ >= 3)
+                    {
+                        current_screen = SCREEN_ERROR;
+                    }
                 }
             }
         }
@@ -159,6 +162,7 @@ void enumerationCheck(proxy_packet_t* pkt)
                 {
                     current_screen = SCREEN_ERROR;
                 }
+                else current_screen = SCREEN_OK;
                 break;
 
             case HID_MOUSE:
@@ -166,6 +170,7 @@ void enumerationCheck(proxy_packet_t* pkt)
                 {
                     current_screen = SCREEN_ERROR;
                 }
+                else current_screen = SCREEN_OK;
                 break;
 
             case MSC:
@@ -173,11 +178,19 @@ void enumerationCheck(proxy_packet_t* pkt)
                 {
                     current_screen = SCREEN_ERROR;
                 }
+                else current_screen = SCREEN_OK;
                 break;
 
-        default:
-            current_screen = SCREEN_ERROR;
-            break;
+            default:
+                current_screen = SCREEN_ERROR;
+                break;
         }
+        update_display = true;
+    }
+    else if (pkt->msg_t == PROXY_MSG_UNMOUNT)
+    {
+        device_selected = NONE;
+        current_screen = SCREEN_KEYBOARD;
+        update_display = true;
     }
 }

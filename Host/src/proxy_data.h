@@ -9,11 +9,11 @@ extern uint8_t volatile device_selected;
 
 typedef enum
 {
-    SCREEN_WELCOME,
     SCREEN_KEYBOARD,
     SCREEN_MOUSE,
     SCREEN_MSC,
     MENU_COUNT,
+    NONE,
     SCREEN_ERROR,
     SCREEN_OK,
 } screen_page_t;

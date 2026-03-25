@@ -1,13 +1,14 @@
 #include "proxy_device.h"
 #include "tusb.h"
+#include "proxy_ssd1306.h"
 
 void device_task()
 {
     while (1)
     {
-        display_task();
         tud_task(); // tinyusb device task
         process_hid();
+        display_task();
     }
 }
 /* Functions */
@@ -17,8 +18,10 @@ void process_hid()
 
     while(proxy_dequeue(&pkt))
     {
+        if (device_selected == NONE) return;
         enumerationCheck(&pkt);
         botDetection(&pkt);
+        if (current_screen == SCREEN_ERROR) return;
         switch(pkt.msg_t)
         {
             case PROXY_MSG_REPORT:
@@ -39,7 +42,7 @@ void process_hid()
                 break;
 
             case PROXY_MSG_MOUNT:
-                //handle mount
+                tud_hid_report(pkt.dev_t, pkt.report, pkt.report_len);
                 break;
 
             case PROXY_MSG_UNMOUNT:
@@ -89,39 +92,47 @@ void display_task()
     {
         switch (current_screen)
         {
-            case SCREEN_WELCOME:
-                //draw screen
-                break;
-
             case SCREEN_KEYBOARD:
-                //draw screen
+                lcd_write_line(&lcd, 0, "Select Device:");
+                lcd_write_line(&lcd, 1, "Keyboard");
+                lcd_show(&lcd);
+                update_display = false;
                 break;
 
             case SCREEN_MOUSE:
-                //draw screen
+                lcd_write_line(&lcd, 0, "Select Device:");
+                lcd_write_line(&lcd, 1, "Mouse");
+                lcd_show(&lcd);
+                update_display = false;
                 break;
 
             case SCREEN_MSC:
-                //draw screen
+                lcd_write_line(&lcd, 0, "Select Device:");
+                lcd_write_line(&lcd, 1, "MSC");
+                lcd_show(&lcd);
+                update_display = false;
                 break;
 
             case SCREEN_OK:
-                //draw ok
+                lcd_write_line(&lcd, 0, "Enumeration");
+                lcd_write_line(&lcd, 1, "of device OK");
+                lcd_show(&lcd);
+                update_display = false;
                 break;
 
             case SCREEN_ERROR:
                 //draw error and do lock the device here
-                while(1)
-                {
-
-                }
+                device_selected = NONE;
+                lcd_write_line(&lcd, 1, "ERROR");
+                lcd_show(&lcd);
+                sleep_ms(5000);
+                current_screen = SCREEN_KEYBOARD;
+                update_display = true;
                 break;
 
             default:
                 //draw screen welcome or something
                 break;
         }
-
-        update_display = 0;
     }
 }
