@@ -24,7 +24,10 @@ typedef enum {
     STATE_IDLE,
     STATE_KEY_DOWN,
     STATE_KEY_UP,
-    STATE_DELAY
+    STATE_DELAY,
+    STATE_WIN_ENTER_DOWN,
+    STATE_WIN_ENTER_UP,
+    STATE_WIN_ENTER_DELAY
 } hid_state_t;
 static hid_state_t state = STATE_IDLE;
 

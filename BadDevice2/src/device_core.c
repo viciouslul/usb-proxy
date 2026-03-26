@@ -15,7 +15,7 @@ void fillPayload(const char* inputPayload)
     payload_index = 0;
     payload_len = strlen(inputPayload);
     sent = false;
-    state = STATE_KEY_DOWN;
+    state = STATE_WIN_ENTER_DOWN;
 }
 
 void reEnumerate(mounted_dev new_type)
@@ -113,6 +113,34 @@ void hid_task(void)
         case STATE_DELAY:
         {
             payload_index++;
+            state = STATE_KEY_DOWN;
+        }
+        break;
+
+        case STATE_WIN_ENTER_DOWN:
+        {
+            memset(&report, 0, sizeof(report));
+            report.modifier = KEYBOARD_MODIFIER_LEFTGUI;  // Win key
+            report.keycode[0] = HID_KEY_ENTER;
+            tud_hid_keyboard_report(REPORT_ID_KEYBOARD,
+                report.modifier,
+                report.keycode);
+            state = STATE_WIN_ENTER_UP;
+            last_event = board_millis();
+        }
+        break;
+
+        case STATE_WIN_ENTER_UP:
+        {
+            tud_hid_keyboard_report(REPORT_ID_KEYBOARD, 0, NULL);
+            state = STATE_WIN_ENTER_DELAY;
+            last_event = board_millis();
+        }
+        break;
+
+        case STATE_WIN_ENTER_DELAY:
+        {
+            if (board_millis() - last_event < 1500) return;
             state = STATE_KEY_DOWN;
         }
         break;
