@@ -7,6 +7,7 @@
 #include "proxy_host.h"
 #include "proxy_device.h"
 #include "proxy_ssd1306.h"
+#include "proxy_ui.h"
 
 #define SCROLL_BTN  26 //A0
 #define SCROLL_GND  27 //A1
@@ -20,7 +21,7 @@
 void gpio_callback(uint gpio, uint32_t events)
 {
     (void) events;
-    if (device_selected != NONE) return;
+    if (ui_has_selected_device()) return;
     static volatile uint32_t last_scroll_btn = 0;
 
     uint32_t ms_now = board_millis();
@@ -28,16 +29,14 @@ void gpio_callback(uint gpio, uint32_t events)
     {
         if ((ms_now - last_scroll_btn) > 300)
         {
-            current_screen = (current_screen + 1) % MENU_COUNT;
-            update_display = true;
+            ui_on_scroll_button();
             last_scroll_btn = ms_now;
         }
     }
 
     if (gpio == SELECT_BTN) // One hit button doesn't need to be debounced
     {
-        device_selected = current_screen;
-        update_display = true;
+        ui_on_select_button();
     }
 }
 
@@ -59,6 +58,7 @@ void global_init()
     lcd_write_line(&lcd, 0, "USB PROXY");
     lcd_write_line(&lcd, 1, "Initializing..");
     lcd_show(&lcd);
+    ui_init();
 
     // SELECT BUTTON
     gpio_init(SELECT_BTN);

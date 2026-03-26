@@ -10,9 +10,15 @@
 #define BOT_KB_MIN_INTERVAL_MS 50
 #define hid_keyboard_report_t 8
 
+typedef enum {
+	ENUM_CHECK_NONE = 0,
+	ENUM_CHECK_OK,
+	ENUM_CHECK_ERROR,
+	ENUM_CHECK_UNMOUNT,
+} enumeration_result_t;
 
-void botDetection(proxy_packet_t* pkt);
+bool botDetection(proxy_packet_t* pkt);
 void botDetection_reset(void);
-void enumerationCheck(proxy_packet_t* pkt);
+enumeration_result_t enumerationCheck(proxy_packet_t* pkt, proxy_device_t selected_device);
 
 

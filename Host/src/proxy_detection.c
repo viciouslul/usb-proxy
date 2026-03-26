@@ -12,11 +12,10 @@ static uint8_t  strike_count =      0;
 
 static void mouseDetection(uint8_t* mouse_data);
 static void keyboardDetection(uint8_t* keyboard_data, uint32_t time);
+static bool bot_detected = false;
 
-void botDetection(proxy_packet_t* pkt)
+bool botDetection(proxy_packet_t* pkt)
 {
-#ifdef PROXY_DEBUG
-#endif
     if (pkt->msg_t == PROXY_MSG_REPORT)
     {
         if (pkt->dev_t == HID_KEYBOARD)
@@ -44,12 +43,19 @@ void botDetection(proxy_packet_t* pkt)
 
             keyboardDetection(pkt->report, pkt->timestamp_us);
         }
+        else if (pkt->dev_t == HID_MOUSE)
+        {
+            mouseDetection(pkt->report);
+        }
     }
+
+    return bot_detected;
 }
 
 static void mouseDetection(uint8_t* mouse_data)
 {
-
+    // NOT IMPLEMENTED
+    (void) mouse_data;
 }
 
 static void keyboardDetection(uint8_t* keyboard_data, uint32_t time)
@@ -125,7 +131,7 @@ static void keyboardDetection(uint8_t* keyboard_data, uint32_t time)
                     memset(kb_history, 0, sizeof(kb_history));
                     if (strike_count++ >= 3)
                     {
-                        current_screen = SCREEN_ERROR;
+                        bot_detected = true;
                     }
                 }
             }
@@ -147,50 +153,34 @@ void botDetection_reset(void)
     kb_prev_keycode = 0x00;
     kb_history_idx  = 0;
     strike_count    = 0;
+    bot_detected    = false;
     memset(kb_prev_report, 0, sizeof(kb_prev_report));
     memset(kb_history,     0, sizeof(kb_history));
 }
 
-void enumerationCheck(proxy_packet_t* pkt)
+enumeration_result_t enumerationCheck(proxy_packet_t* pkt, proxy_device_t selected_device)
 {
     if (pkt->msg_t == PROXY_MSG_MOUNT)
     {
         switch(pkt->dev_t)
         {
             case HID_KEYBOARD:
-                if (device_selected != SCREEN_KEYBOARD)
-                {
-                    current_screen = SCREEN_ERROR;
-                }
-                else current_screen = SCREEN_OK;
-                break;
+                return (selected_device == HID_KEYBOARD) ? ENUM_CHECK_OK : ENUM_CHECK_ERROR;
 
             case HID_MOUSE:
-                if (device_selected != SCREEN_MOUSE)
-                {
-                    current_screen = SCREEN_ERROR;
-                }
-                else current_screen = SCREEN_OK;
-                break;
+                return (selected_device == HID_MOUSE) ? ENUM_CHECK_OK : ENUM_CHECK_ERROR;
 
             case MSC:
-                if (device_selected != SCREEN_MSC)
-                {
-                    current_screen = SCREEN_ERROR;
-                }
-                else current_screen = SCREEN_OK;
-                break;
+                return (selected_device == MSC) ? ENUM_CHECK_OK : ENUM_CHECK_ERROR;
 
             default:
-                current_screen = SCREEN_ERROR;
-                break;
+                return ENUM_CHECK_ERROR;
         }
-        update_display = true;
     }
     else if (pkt->msg_t == PROXY_MSG_UNMOUNT)
     {
-        device_selected = NONE;
-        current_screen = SCREEN_KEYBOARD;
-        update_display = true;
+        return ENUM_CHECK_UNMOUNT;
     }
+
+    return ENUM_CHECK_NONE;
 }

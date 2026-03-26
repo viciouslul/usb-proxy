@@ -1,6 +1,5 @@
 #include "proxy_device.h"
 #include "tusb.h"
-#include "proxy_ssd1306.h"
 
 void device_task()
 {
@@ -8,7 +7,7 @@ void device_task()
     {
         tud_task(); // tinyusb device task
         process_hid();
-        display_task();
+        ui_task();
     }
 }
 /* Functions */
@@ -18,10 +17,35 @@ void process_hid()
 
     while(proxy_dequeue(&pkt))
     {
-        if (device_selected == NONE) return;
-        enumerationCheck(&pkt);
-        botDetection(&pkt);
-        if (current_screen == SCREEN_ERROR) return;
+        proxy_device_t selected_device = ui_get_selected_device();
+        if (selected_device == HID_NONE) return;
+
+        enumeration_result_t enum_result = enumerationCheck(&pkt, selected_device);
+        if (enum_result == ENUM_CHECK_UNMOUNT)
+        {
+            botDetection_reset();
+            proxy_queue_reset();
+            ui_on_unmount();
+            return;
+        }
+        if (enum_result == ENUM_CHECK_ERROR)
+        {
+            ui_on_enumeration_result(false);
+            return;
+        }
+        if (enum_result == ENUM_CHECK_OK)
+        {
+            ui_on_enumeration_result(true);
+        }
+
+        if (botDetection(&pkt))
+        {
+            botDetection_reset();
+            proxy_queue_reset();
+            ui_on_security_error();
+            return;
+        }
+
         switch(pkt.msg_t)
         {
             case PROXY_MSG_REPORT:
@@ -46,8 +70,6 @@ void process_hid()
                 break;
 
             case PROXY_MSG_UNMOUNT:
-                botDetection_reset(); //just reset everything in detection when we unmount
-                proxy_queue_reset(); //also just reset the queue
                 break;
 
             case PROXY_MSG_NONE:
@@ -83,56 +105,4 @@ void tud_hid_report_complete_cb(uint8_t instance, uint8_t const *report, uint16_
     (void)instance;
     (void)report;
     (void)len;
-}
-
-
-void display_task()
-{
-    if (update_display)
-    {
-        switch (current_screen)
-        {
-            case SCREEN_KEYBOARD:
-                lcd_write_line(&lcd, 0, "Select Device:");
-                lcd_write_line(&lcd, 1, "Keyboard");
-                lcd_show(&lcd);
-                update_display = false;
-                break;
-
-            case SCREEN_MOUSE:
-                lcd_write_line(&lcd, 0, "Select Device:");
-                lcd_write_line(&lcd, 1, "Mouse");
-                lcd_show(&lcd);
-                update_display = false;
-                break;
-
-            case SCREEN_MSC:
-                lcd_write_line(&lcd, 0, "Select Device:");
-                lcd_write_line(&lcd, 1, "MSC");
-                lcd_show(&lcd);
-                update_display = false;
-                break;
-
-            case SCREEN_OK:
-                lcd_write_line(&lcd, 0, "Enumeration");
-                lcd_write_line(&lcd, 1, "of device OK");
-                lcd_show(&lcd);
-                update_display = false;
-                break;
-
-            case SCREEN_ERROR:
-                //draw error and do lock the device here
-                device_selected = NONE;
-                lcd_write_line(&lcd, 1, "ERROR");
-                lcd_show(&lcd);
-                sleep_ms(5000);
-                current_screen = SCREEN_KEYBOARD;
-                update_display = true;
-                break;
-
-            default:
-                //draw screen welcome or something
-                break;
-        }
-    }
 }

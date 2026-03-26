@@ -44,6 +44,7 @@ add_executable(usb-proxy
         src/proxy_device.c
         src/proxy_data.c
         src/proxy_detection.c
+        src/proxy_ui.c
         src/proxy_ssd1306.c
 )
 target_sources(usb-proxy PRIVATE
@@ -53,6 +54,7 @@ target_sources(usb-proxy PRIVATE
     src/proxy_device.c
     src/proxy_data.c
     src/proxy_detection.c
+    src/proxy_ui.c
     src/proxy_ssd1306.c
     ${PICO_TINYUSB_PATH}/src/portable/raspberrypi/pio_usb/dcd_pio_usb.c
     ${PICO_TINYUSB_PATH}/src/portable/raspberrypi/pio_usb/hcd_pio_usb.c

@@ -5,22 +5,6 @@
 #define PROXY_QUEUE_SIZE    64
 #define DEVICE_STATE        1
 
-extern uint8_t volatile device_selected;
-
-typedef enum
-{
-    SCREEN_KEYBOARD,
-    SCREEN_MOUSE,
-    SCREEN_MSC,
-    MENU_COUNT,
-    NONE,
-    SCREEN_ERROR,
-    SCREEN_OK,
-} screen_page_t;
-
-extern volatile screen_page_t current_screen;
-extern volatile bool update_display;
-
 typedef enum {
     PROXY_MSG_NONE = 0,
     PROXY_MSG_MOUNT,
