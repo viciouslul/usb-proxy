@@ -3,6 +3,7 @@
 
 #define MAX_HID_REPORT_SIZE 8
 #define PROXY_QUEUE_SIZE    64
+#define DEVICE_STATE        1
 
 typedef enum {
     PROXY_MSG_NONE = 0,

@@ -7,6 +7,7 @@ void device_task()
     {
         tud_task(); // tinyusb device task
         process_hid();
+        ui_task();
     }
 }
 /* Functions */
@@ -16,7 +17,35 @@ void process_hid()
 
     while(proxy_dequeue(&pkt))
     {
-        botDetection(&pkt);
+        proxy_device_t selected_device = ui_get_selected_device();
+        if (selected_device == HID_NONE) return;
+
+        enumeration_result_t enum_result = enumerationCheck(&pkt, selected_device);
+        if (enum_result == ENUM_CHECK_UNMOUNT)
+        {
+            botDetection_reset();
+            proxy_queue_reset();
+            ui_on_unmount();
+            return;
+        }
+        if (enum_result == ENUM_CHECK_ERROR)
+        {
+            ui_on_enumeration_result(false);
+            return;
+        }
+        if (enum_result == ENUM_CHECK_OK)
+        {
+            ui_on_enumeration_result(true);
+        }
+
+        if (botDetection(&pkt))
+        {
+            botDetection_reset();
+            proxy_queue_reset();
+            ui_on_security_error();
+            return;
+        }
+
         switch(pkt.msg_t)
         {
             case PROXY_MSG_REPORT:
@@ -37,12 +66,10 @@ void process_hid()
                 break;
 
             case PROXY_MSG_MOUNT:
-                //handle mount
+                tud_hid_report(pkt.dev_t, pkt.report, pkt.report_len);
                 break;
 
             case PROXY_MSG_UNMOUNT:
-                botDetection_reset(); //just reset everything in detection when we unmount
-                proxy_queue_reset(); //also just reset the queue
                 break;
 
             case PROXY_MSG_NONE:

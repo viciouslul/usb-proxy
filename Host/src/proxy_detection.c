@@ -12,11 +12,10 @@ static uint8_t  strike_count =      0;
 
 static void mouseDetection(uint8_t* mouse_data);
 static void keyboardDetection(uint8_t* keyboard_data, uint32_t time);
+static bool bot_detected = false;
 
-void botDetection(proxy_packet_t* pkt)
-{  
-#ifdef PROXY_DEBUG
-#endif
+bool botDetection(proxy_packet_t* pkt)
+{
     if (pkt->msg_t == PROXY_MSG_REPORT)
     {
         if (pkt->dev_t == HID_KEYBOARD)
@@ -44,12 +43,19 @@ void botDetection(proxy_packet_t* pkt)
 
             keyboardDetection(pkt->report, pkt->timestamp_us);
         }
+        else if (pkt->dev_t == HID_MOUSE)
+        {
+            mouseDetection(pkt->report);
+        }
     }
+
+    return bot_detected;
 }
 
 static void mouseDetection(uint8_t* mouse_data)
 {
-
+    // NOT IMPLEMENTED
+    (void) mouse_data;
 }
 
 static void keyboardDetection(uint8_t* keyboard_data, uint32_t time)
@@ -94,7 +100,6 @@ static void keyboardDetection(uint8_t* keyboard_data, uint32_t time)
         }
     }
 
-
     // 2. Only process if it's a fresh key press event
     if(new_key && any_key_down)
     {
@@ -124,7 +129,10 @@ static void keyboardDetection(uint8_t* keyboard_data, uint32_t time)
                 if (avg < BOT_AVG_THRESHOLD && spread < MIN_SPREAD_THRESHOLD)
                 {
                     memset(kb_history, 0, sizeof(kb_history));
-                    if (strike_count++ >= 3) while(1);
+                    if (strike_count++ >= 3)
+                    {
+                        bot_detected = true;
+                    }
                 }
             }
         }
@@ -145,6 +153,34 @@ void botDetection_reset(void)
     kb_prev_keycode = 0x00;
     kb_history_idx  = 0;
     strike_count    = 0;
+    bot_detected    = false;
     memset(kb_prev_report, 0, sizeof(kb_prev_report));
     memset(kb_history,     0, sizeof(kb_history));
+}
+
+enumeration_result_t enumerationCheck(proxy_packet_t* pkt, proxy_device_t selected_device)
+{
+    if (pkt->msg_t == PROXY_MSG_MOUNT)
+    {
+        switch(pkt->dev_t)
+        {
+            case HID_KEYBOARD:
+                return (selected_device == HID_KEYBOARD) ? ENUM_CHECK_OK : ENUM_CHECK_ERROR;
+
+            case HID_MOUSE:
+                return (selected_device == HID_MOUSE) ? ENUM_CHECK_OK : ENUM_CHECK_ERROR;
+
+            case MSC:
+                return (selected_device == MSC) ? ENUM_CHECK_OK : ENUM_CHECK_ERROR;
+
+            default:
+                return ENUM_CHECK_ERROR;
+        }
+    }
+    else if (pkt->msg_t == PROXY_MSG_UNMOUNT)
+    {
+        return ENUM_CHECK_UNMOUNT;
+    }
+
+    return ENUM_CHECK_NONE;
 }

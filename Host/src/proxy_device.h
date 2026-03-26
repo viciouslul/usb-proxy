@@ -2,6 +2,7 @@
 #include "tusb.h"
 #include "proxy_data.h"
 #include "proxy_detection.h"
+#include "proxy_ui.h"
 
 void device_task();
 

@@ -79,6 +79,7 @@ void tuh_hid_umount_cb(uint8_t dev_addr, uint8_t instance)
     (void) dev_addr;
     (void) instance;
 #endif
+
 }
 
 void tuh_hid_report_received_cb(uint8_t dev_addr, uint8_t instance, uint8_t const* report, uint16_t len)
@@ -96,7 +97,6 @@ void tuh_hid_report_received_cb(uint8_t dev_addr, uint8_t instance, uint8_t cons
     }
 
     proxy_device_t hid_type = get_hid_type(itf_protocol);
-
 
 #ifdef PROXY_DEBUG
     if (hid_type == HID_KEYBOARD)
@@ -131,7 +131,7 @@ static bool inquiry_complete_cb(uint8_t dev_addr, tuh_msc_complete_data_t const 
   msc_cbw_t const* cbw = cb_data->cbw;
   msc_csw_t const* csw = cb_data->csw;
 
-  if (csw->status != 0) 
+  if (csw->status != 0)
   {
     #ifdef PROXY_DEBUG
     tud_cdc_write_str("Inquiry failed\r\n");
@@ -157,7 +157,7 @@ static bool inquiry_complete_cb(uint8_t dev_addr, tuh_msc_complete_data_t const 
 }
 
 //------------- IMPLEMENTATION -------------//
-void tuh_msc_mount_cb(uint8_t dev_addr) 
+void tuh_msc_mount_cb(uint8_t dev_addr)
 {
 #ifdef PROXY_DEBUG
   tud_cdc_write_str("A MassStorage device is mounted\r\n");
