@@ -8,6 +8,7 @@
 #include "proxy_device.h"
 #include "proxy_ssd1306.h"
 #include "proxy_ui.h"
+#include "proxy_metrics.h"
 
 #define SCROLL_BTN  26 //A0
 #define SCROLL_GND  27 //A1
@@ -59,6 +60,7 @@ void global_init()
     lcd_write_line(&lcd, 1, "Initializing..");
     lcd_show(&lcd);
     ui_init();
+    metrics_init();
 
     // SELECT BUTTON
     gpio_init(SELECT_BTN);

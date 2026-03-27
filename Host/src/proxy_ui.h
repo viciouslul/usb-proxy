@@ -9,6 +9,7 @@ void ui_task(void);
 void ui_on_scroll_button(void);
 void ui_on_select_button(void);
 
+void ui_set_vid_pid(uint16_t vid, uint16_t pid);
 void ui_on_enumeration_result(bool ok);
 void ui_on_security_error(void);
 void ui_on_unmount(void);

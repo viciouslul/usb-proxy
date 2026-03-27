@@ -45,6 +45,7 @@ add_executable(usb-proxy
         src/proxy_data.c
         src/proxy_detection.c
         src/proxy_ui.c
+        src/proxy_metrics.c
         src/proxy_ssd1306.c
 )
 target_sources(usb-proxy PRIVATE
@@ -55,6 +56,7 @@ target_sources(usb-proxy PRIVATE
     src/proxy_data.c
     src/proxy_detection.c
     src/proxy_ui.c
+    src/proxy_metrics.c
     src/proxy_ssd1306.c
     ${PICO_TINYUSB_PATH}/src/portable/raspberrypi/pio_usb/dcd_pio_usb.c
     ${PICO_TINYUSB_PATH}/src/portable/raspberrypi/pio_usb/hcd_pio_usb.c
@@ -67,7 +69,8 @@ pico_set_program_version(usb-proxy "0.1")
 pico_enable_stdio_uart(usb-proxy 0)
 pico_enable_stdio_usb(usb-proxy 0)
 
-set(PROXY_DEBUG 1)
+set(PROXY_METRICS 1)
+set(PROXY_FILTERING 1)
 
 # Add the standard library to the build
 target_link_libraries(usb-proxy
@@ -84,11 +87,15 @@ target_compile_definitions(usb-proxy PRIVATE
     USE_ADAFRUIT_FEATHER_RP2040_USBHOST
 )
 
-if(PROXY_DEBUG)
+if(PROXY_METRICS)
     target_compile_definitions(usb-proxy PRIVATE
-        PROXY_DEBUG
+        PROXY_METRICS
     )
 endif()
+
+target_compile_definitions(usb-proxy PRIVATE
+    PROXY_FILTERING=${PROXY_FILTERING}
+)
 
 # Add the standard include files to the build
 target_include_directories(usb-proxy PRIVATE

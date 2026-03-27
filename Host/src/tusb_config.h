@@ -104,7 +104,7 @@ extern "C" {
 //------------- CLASS -------------//
 // CDC
 
-#ifdef PROXY_DEBUG
+#ifdef PROXY_METRICS
 #define CFG_TUD_CDC     1
 
 // CDC FIFO size of TX and RX

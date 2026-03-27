@@ -1,5 +1,12 @@
 #include "proxy_device.h"
 #include "tusb.h"
+#include "proxy_metrics.h"
+#include "pico/stdlib.h"
+
+static bool kb_latency_pending = false;
+static uint32_t kb_pending_pkt_timestamp_us = 0;
+static uint32_t kb_pending_submit_timestamp_us = 0;
+static bool kb_pending_filtering_enabled = false;
 
 void device_task()
 {
@@ -20,30 +27,58 @@ void process_hid()
         proxy_device_t selected_device = ui_get_selected_device();
         if (selected_device == HID_NONE) return;
 
+        if (pkt.msg_t == PROXY_MSG_MOUNT)
+        {
+            ui_set_vid_pid(pkt.vid, pkt.pid);
+        }
+
+#if defined(PROXY_FILTERING) && (PROXY_FILTERING == 1)
+        bool filtering_enabled = true;
+#else
+        bool filtering_enabled = false;
+#endif
+
         enumeration_result_t enum_result = enumerationCheck(&pkt, selected_device);
         if (enum_result == ENUM_CHECK_UNMOUNT)
         {
             botDetection_reset();
             proxy_queue_reset();
             ui_on_unmount();
+            metrics_record_event((detection_event_t){.device_type = selected_device, .event_type = EVENT_DEVICE_UNMOUNTED});
             return;
         }
+
         if (enum_result == ENUM_CHECK_ERROR)
         {
             ui_on_enumeration_result(false);
-            return;
+            metrics_record_event((detection_event_t){.device_type = selected_device, .event_type = EVENT_ENUM_ERROR});
+            metrics_record_enumeration_mismatch();
+
+            if (filtering_enabled)
+            {
+                metrics_record_report_processed(true);
+                return;
+            }
         }
+
         if (enum_result == ENUM_CHECK_OK)
         {
             ui_on_enumeration_result(true);
+            metrics_record_event((detection_event_t){.device_type = selected_device, .event_type = EVENT_ENUM_OK});
         }
 
-        if (botDetection(&pkt))
+        if (filtering_enabled)
         {
-            botDetection_reset();
-            proxy_queue_reset();
-            ui_on_security_error();
-            return;
+            bool bot_detected = botDetection(&pkt);
+            if (bot_detected)
+            {
+                botDetection_reset();
+                proxy_queue_reset();
+                ui_on_security_error();
+                metrics_record_event((detection_event_t){.device_type = selected_device, .event_type = EVENT_BOT_DETECTED});
+                metrics_record_report_processed(true);
+                return;
+            }
         }
 
         switch(pkt.msg_t)
@@ -51,17 +86,34 @@ void process_hid()
             case PROXY_MSG_REPORT:
                 if(pkt.dev_t == HID_KEYBOARD)
                 {
-                    tud_hid_report(pkt.dev_t, pkt.report, pkt.report_len);
-                    #ifdef PROXY_DEBUG
-                    if (pkt.report[2] != 0x00)
+                    bool any_key_down = false;
+                    for (uint16_t i = 2; i < pkt.report_len && i < 8; i++)
                     {
-                        // collect_kb_delay(pkt.timestamp_us, time_us_32());
+                        if (pkt.report[i] != 0)
+                        {
+                            any_key_down = true;
+                            break;
+                        }
                     }
-                    #endif
+
+                    bool sent = tud_hid_report(pkt.dev_t, pkt.report, pkt.report_len);
+                    if (sent)
+                    {
+                        metrics_record_report_processed(false);
+                        if (any_key_down)
+                        {
+                            // Measure end-to-end latency when USB transfer completes.
+                            kb_pending_pkt_timestamp_us = pkt.timestamp_us;
+                            kb_pending_submit_timestamp_us = time_us_32();
+                            kb_pending_filtering_enabled = filtering_enabled;
+                            kb_latency_pending = true;
+                        }
+                    }
                 }
                 else if(pkt.dev_t == HID_MOUSE)
                 {
                     tud_hid_report(pkt.dev_t, pkt.report, pkt.report_len);
+                    metrics_record_report_processed(false);
                 }
                 break;
 
@@ -105,4 +157,27 @@ void tud_hid_report_complete_cb(uint8_t instance, uint8_t const *report, uint16_
     (void)instance;
     (void)report;
     (void)len;
+
+    if (kb_latency_pending)
+    {
+        uint32_t complete_ts_us = time_us_32();
+        uint32_t queue_us = kb_pending_submit_timestamp_us - kb_pending_pkt_timestamp_us;
+        uint32_t usb_us = complete_ts_us - kb_pending_submit_timestamp_us;
+        uint32_t total_us = complete_ts_us - kb_pending_pkt_timestamp_us;
+
+        forwarding_sample_t sample = {
+            .sequence = 0,
+            .filtering_enabled = kb_pending_filtering_enabled,
+            .host_ts_us = kb_pending_pkt_timestamp_us,
+            .submit_ts_us = kb_pending_submit_timestamp_us,
+            .complete_ts_us = complete_ts_us,
+            .queue_us = queue_us,
+            .usb_us = usb_us,
+            .total_us = total_us,
+        };
+
+        metrics_record_forwarding_sample(sample);
+        metrics_try_export_cdc();
+        kb_latency_pending = false;
+    }
 }

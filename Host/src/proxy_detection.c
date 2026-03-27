@@ -1,4 +1,5 @@
 #include "proxy_detection.h"
+#include "proxy_metrics.h"
 #include <stdlib.h>
 
 static uint32_t kb_last =           0;
@@ -20,20 +21,6 @@ bool botDetection(proxy_packet_t* pkt)
     {
         if (pkt->dev_t == HID_KEYBOARD)
         {
-            /****Debug things***
-            tud_cdc_write_str("We are in botDetection, why?\r\n");
-            char buf[64];
-            sprintf(buf, "report_len: %u\r\n", pkt->report_len);
-            tud_cdc_write(buf, strlen(buf));
-            tud_cdc_write_flush();
-
-            sprintf(buf, "report: %02x %02x %02x %02x %02x %02x %02x %02x\r\n",
-                pkt->report[0], pkt->report[1], pkt->report[2], pkt->report[3],
-                pkt->report[4], pkt->report[5], pkt->report[6], pkt->report[7]);
-            tud_cdc_write(buf, strlen(buf));
-            tud_cdc_write_flush();
-            */
-
             /*do some checks*/
             // 1. Length Check: Catch malformed/malicious packets
             //if (pkt->report_len != 8) while(1);
@@ -103,9 +90,13 @@ static void keyboardDetection(uint8_t* keyboard_data, uint32_t time)
     // 2. Only process if it's a fresh key press event
     if(new_key && any_key_down)
     {
+        uint8_t current_keycode = keyboard_data[2];  // Get the new key
         if(kb_last != 0)
         {
             uint32_t current_interval = time - kb_last;
+
+            // Record keystroke interval (not marked suspicious yet)
+            metrics_record_keystroke(current_interval, current_keycode, false);
 
             // Store the delay
             kb_history[kb_history_idx] = current_interval;
@@ -128,6 +119,11 @@ static void keyboardDetection(uint8_t* keyboard_data, uint32_t time)
 
                 if (avg < BOT_AVG_THRESHOLD && spread < MIN_SPREAD_THRESHOLD)
                 {
+                    // Mark recent keystrokes as suspicious and trigger bot alert
+                    for (int i = 0; i < 4; i++)
+                    {
+                        metrics_record_keystroke(kb_history[i], current_keycode, true);
+                    }
                     memset(kb_history, 0, sizeof(kb_history));
                     if (strike_count++ >= 3)
                     {

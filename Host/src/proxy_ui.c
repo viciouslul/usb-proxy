@@ -2,6 +2,7 @@
 
 #include "proxy_ssd1306.h"
 #include "pico/stdlib.h"
+#include <stdio.h>
 
 typedef enum
 {
@@ -18,6 +19,8 @@ typedef enum
 static ui_screen_t current_screen = UI_SCREEN_SELECT_KEYBOARD;
 static bool update_display = true;
 static proxy_device_t selected_device = HID_NONE;
+static uint16_t current_vid = 0;
+static uint16_t current_pid = 0;
 
 static const proxy_device_t menu_devices[] = {
     HID_KEYBOARD,
@@ -55,6 +58,8 @@ void ui_init(void)
     current_screen = UI_SCREEN_SELECT_KEYBOARD;
     update_display = true;
     selected_device = HID_NONE;
+    current_vid = 0;
+    current_pid = 0;
 }
 
 void ui_task(void)
@@ -101,11 +106,15 @@ void ui_task(void)
             break;
 
         case UI_SCREEN_ENUM_OK:
-            lcd_write_line(&lcd, 0, "Device ready");
-            lcd_write_line(&lcd, 1, "to use");
+        {
+            char vid_pid_line[17] = {0};
+            snprintf(vid_pid_line, sizeof(vid_pid_line), "%04X:%04X", current_vid, current_pid);
+            lcd_write_line(&lcd, 0, "Ready to use");
+            lcd_write_line(&lcd, 1, vid_pid_line);
             lcd_show(&lcd);
             update_display = false;
             break;
+        }
 
         case UI_SCREEN_ENUM_ERROR:
             selected_device = HID_NONE;
@@ -150,6 +159,12 @@ void ui_on_select_button(void)
     update_display = true;
 }
 
+void ui_set_vid_pid(uint16_t vid, uint16_t pid)
+{
+    current_vid = vid;
+    current_pid = pid;
+}
+
 void ui_on_enumeration_result(bool ok)
 {
     current_screen = ok ? UI_SCREEN_ENUM_OK : UI_SCREEN_ENUM_ERROR;
@@ -165,6 +180,8 @@ void ui_on_security_error(void)
 void ui_on_unmount(void)
 {
     selected_device = HID_NONE;
+    current_vid = 0;
+    current_pid = 0;
     current_screen = UI_SCREEN_DEVICE_UNMOUNTED;
     update_display = true;
 }

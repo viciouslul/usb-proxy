@@ -23,6 +23,8 @@ typedef struct {
     proxy_msg_t msg_t;
     proxy_device_t dev_t;
     uint32_t timestamp_us;
+    uint16_t pid;
+    uint16_t vid;
 
     uint16_t report_len;
     uint8_t report[MAX_HID_REPORT_SIZE];
