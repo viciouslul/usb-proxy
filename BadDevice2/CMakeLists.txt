@@ -54,6 +54,7 @@ target_link_libraries(BadDevice2
         pico_stdlib
         tinyusb_device
         tinyusb_board
+        hardware_uart
 )
 
 # Add the standard include files to the build

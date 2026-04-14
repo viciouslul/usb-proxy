@@ -6,17 +6,13 @@
 #include "usb_descriptors.h"
 #include "device_core.h"
 #include <stdlib.h>
+#include "hardware/uart.h"
 
 #define LED_PIN           11
-#define GPIO_BTN_1        26
-#define GPIO_BTN_2        27
-#define DEBOUNCE_MS       150
-
-/* Global variables */
-volatile uint32_t last_key_btn1 = 0;
-volatile uint32_t last_key_btn2 = 0;
-volatile uint8_t handle_btn1 = 0;
-volatile uint8_t handle_btn2 = 0;
+#define BT_UART           uart0
+#define BT_BAUD_RATE      9600
+#define BT_TX_PIN         0
+#define BT_RX_PIN         1
 
 /* Required TinyUSB callbacks */
 uint16_t tud_hid_get_report_cb(uint8_t instance, uint8_t report_id,
@@ -60,22 +56,6 @@ void tud_resume_cb(void)
     /* Do nothing */
 }
 
-void gpio_callback(uint gpio, uint32_t events)
-{
-    uint32_t now = board_millis();
-
-    if (gpio == GPIO_BTN_1) {
-        if ((now - last_key_btn1) >= DEBOUNCE_MS) {
-            handle_btn1 = 1;
-            last_key_btn1 = now;
-        }
-    } else if (gpio == GPIO_BTN_2) {
-        if ((now - last_key_btn2) >= DEBOUNCE_MS) {
-            handle_btn2 = 1;
-            last_key_btn2 = now;
-        }
-    }
-}
 
 int main(void)
 {
@@ -83,35 +63,35 @@ int main(void)
     board_init();
     srand(board_millis());  /* Seed random number generator */
     tud_init(BOARD_TUD_RHPORT);
-    if (board_init_after_tusb) {
+    if (board_init_after_tusb) 
+    {
         board_init_after_tusb();
     }
     sleep_ms(500);
 
     /* GPIO setup */
     gpio_init(LED_PIN);
-    gpio_init(GPIO_BTN_1);
-    gpio_set_dir(GPIO_BTN_1, GPIO_IN);
-    gpio_pull_up(GPIO_BTN_1);
-    gpio_set_irq_enabled_with_callback(GPIO_BTN_1, GPIO_IRQ_EDGE_FALL, true, &gpio_callback);
-    gpio_init(GPIO_BTN_2);
-    gpio_set_dir(GPIO_BTN_2, GPIO_IN);
-    gpio_pull_up(GPIO_BTN_2);
-    gpio_set_irq_enabled_with_callback(GPIO_BTN_2, GPIO_IRQ_EDGE_FALL, true, &gpio_callback);
     gpio_set_dir(LED_PIN, GPIO_OUT);
 
+    /* UART setup for HC-06 Bluetooth module */
+    uart_init(BT_UART, BT_BAUD_RATE);
+    gpio_set_function(BT_TX_PIN, GPIO_FUNC_UART);
+    gpio_set_function(BT_RX_PIN, GPIO_FUNC_UART);
+
     while (1) {
-        if (handle_btn1) {
-            fillPayload("u got rekt\n", true); /* Linux */
-            handle_btn1 = 0;
-        }
-        if (handle_btn2) {
-            if (current_dev == MSC) {
-                reEnumerate(HID);
-            } else {
-                reEnumerate(MSC);
+        while (uart_is_readable(BT_UART)) {
+            char cmd = uart_getc(BT_UART);
+            if (cmd == '1') 
+            {
+                fillPayload("u got rekt\n", true); /* Linux */
+            } 
+            else if (cmd == '2') 
+            {
+                if (current_dev == MSC) 
+                    reEnumerate(HID);
+                else 
+                    reEnumerate(MSC);
             }
-            handle_btn2 = 0;
         }
 
         tud_task();

@@ -24,7 +24,8 @@ void reEnumerate(mounted_dev new_type)
     tud_disconnect();
     sleep_ms(1000);
 
-    switch (new_type) {
+    switch (new_type) 
+    {
     case MSC:
         current_dev = MSC;
         desc_device.idVendor = USB_VID_MSC;
@@ -76,8 +77,10 @@ void hid_task(void)
     case STATE_IDLE:
         return;
 
-    case STATE_KEY_DOWN: {
-        if (payload_index >= payload_len) {
+    case STATE_KEY_DOWN: 
+    {
+        if (payload_index >= payload_len) 
+        {
             sent = true;
             state = STATE_IDLE;
             return;
@@ -87,7 +90,8 @@ void hid_task(void)
 
         memset(&report, 0, sizeof(report));
 
-        if (c < 128) {
+        if (c < 128) 
+        {
             report.modifier = ascii_to_keycode[c][0];
             report.keycode[0] = ascii_to_keycode[c][1];
         }
@@ -101,7 +105,8 @@ void hid_task(void)
     }
     break;
 
-    case STATE_KEY_UP: {
+    case STATE_KEY_UP: 
+    {
         /* Release key */
         tud_hid_keyboard_report(REPORT_ID_KEYBOARD, 0, NULL);
 
@@ -110,30 +115,37 @@ void hid_task(void)
     }
     break;
 
-    case STATE_DELAY: {
-        if (randomized) {
+    case STATE_DELAY: 
+    {
+        if (randomized) 
+        {
             /* Generate random delay between 50-250ms */
             random_delay_duration = (rand() % 200) + 50;
             random_delay_start = board_millis();
             state = STATE_RANDOM_DELAY;
-        } else {
+        } 
+        else 
+        {
             payload_index++;
             state = STATE_KEY_DOWN;
         }
     }
     break;
 
-    case STATE_RANDOM_DELAY: {
-        if (board_millis() - random_delay_start >= random_delay_duration) {
+    case STATE_RANDOM_DELAY: 
+    {
+        if (board_millis() - random_delay_start >= random_delay_duration) 
+        {
             payload_index++;
             state = STATE_KEY_DOWN;
         }
     }
     break;
 
-    case STATE_WIN_ENTER_DOWN: {
+    case STATE_WIN_ENTER_DOWN: 
+    {
         memset(&report, 0, sizeof(report));
-        report.modifier = KEYBOARD_MODIFIER_LEFTGUI;  /* Win key */
+        report.modifier = KEYBOARD_MODIFIER_LEFTALT;  /* Win key */
         report.keycode[0] = HID_KEY_ENTER;
         tud_hid_keyboard_report(REPORT_ID_KEYBOARD,
                                 report.modifier,
@@ -143,14 +155,16 @@ void hid_task(void)
     }
     break;
 
-    case STATE_WIN_ENTER_UP: {
+    case STATE_WIN_ENTER_UP: 
+    {
         tud_hid_keyboard_report(REPORT_ID_KEYBOARD, 0, NULL);
         state = STATE_WIN_ENTER_DELAY;
         last_event = board_millis();
     }
     break;
 
-    case STATE_WIN_ENTER_DELAY: {
+    case STATE_WIN_ENTER_DELAY: 
+    {
         if (board_millis() - last_event < 1500)
             return;
         state = STATE_KEY_DOWN;
