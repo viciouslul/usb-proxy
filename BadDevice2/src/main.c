@@ -78,8 +78,10 @@ int main(void)
     gpio_set_function(BT_TX_PIN, GPIO_FUNC_UART);
     gpio_set_function(BT_RX_PIN, GPIO_FUNC_UART);
 
-    while (1) {
-        while (uart_is_readable(BT_UART)) {
+    while (1) 
+    {
+        while (uart_is_readable(BT_UART)) 
+        {
             char cmd = uart_getc(BT_UART);
             if (cmd == '1') 
             {
