@@ -25,7 +25,8 @@ extern uint8_t const desc_configuration_hid[];
 extern uint8_t const *active_config;
 extern char const *string_desc_arr[];
 
-typedef enum {
+typedef enum 
+{
     STATE_IDLE,
     STATE_KEY_DOWN,
     STATE_KEY_UP,
@@ -34,17 +35,22 @@ typedef enum {
     STATE_WIN_ENTER_DOWN,
     STATE_WIN_ENTER_UP,
     STATE_WIN_ENTER_DELAY,
+    STATE_SINGLE_KEY_DOWN, /* Macropad: send one keycode */
+    STATE_SINGLE_KEY_UP,   /* Macropad: release key */
 } hid_state_t;
 
 static hid_state_t state = STATE_IDLE;
 
-typedef enum {
+typedef enum 
+{
     HID,
     MSC,
 } mounted_dev;
 
 static mounted_dev current_dev = HID;
 
-void hid_task(void);
+void hidTask(void);
 void fillPayload(const char *inputPayload, bool randomized);
 void reEnumerate(mounted_dev new_type);
+void sendKey(uint8_t modifier, uint8_t keycode);
+bool hid_is_idle(void);

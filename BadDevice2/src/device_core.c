@@ -9,6 +9,25 @@
 
 uint8_t const ascii_to_keycode[128][2] = { HID_ASCII_TO_KEYCODE };
 
+static uint8_t single_key_modifier = 0;
+static uint8_t single_key_keycode  = 0;
+
+void sendKey(uint8_t modifier, uint8_t keycode)
+{
+    /* Don't interrupt an ongoing payload — only fires when idle */
+    if (state != STATE_IDLE)
+        return;
+    single_key_modifier = modifier;
+    single_key_keycode  = keycode;
+    sent  = false;
+    state = STATE_SINGLE_KEY_DOWN;
+}
+
+bool hid_is_idle(void)
+{
+    return state == STATE_IDLE;
+}
+
 void fillPayload(const char *inputPayload, bool randomized_param)
 {
     payload = inputPayload;
@@ -55,7 +74,7 @@ void reEnumerate(mounted_dev new_type)
     tud_connect();
 }
 
-void hid_task(void)
+void hidTask(void)
 {
     if (current_dev == MSC)
         return;
@@ -73,7 +92,8 @@ void hid_task(void)
 
     static hid_keyboard_report_t report;
 
-    switch (state) {
+    switch (state)
+    {
     case STATE_IDLE:
         return;
 
@@ -163,11 +183,32 @@ void hid_task(void)
     }
     break;
 
-    case STATE_WIN_ENTER_DELAY: 
+    case STATE_WIN_ENTER_DELAY:
     {
         if (board_millis() - last_event < 1500)
             return;
         state = STATE_KEY_DOWN;
+    }
+    break;
+
+    case STATE_SINGLE_KEY_DOWN:
+    {
+        memset(&report, 0, sizeof(report));
+        report.modifier   = single_key_modifier;
+        report.keycode[0] = single_key_keycode;
+        tud_hid_keyboard_report(REPORT_ID_KEYBOARD,
+                                report.modifier,
+                                report.keycode);
+        state = STATE_SINGLE_KEY_UP;
+        last_event = board_millis();
+    }
+    break;
+
+    case STATE_SINGLE_KEY_UP:
+    {
+        tud_hid_keyboard_report(REPORT_ID_KEYBOARD, 0, NULL);
+        state = STATE_IDLE;
+        last_event = board_millis();
     }
     break;
     }
