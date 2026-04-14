@@ -45,12 +45,11 @@ void tuh_hid_mount_cb(uint8_t dev_addr, uint8_t instance, uint8_t const* desc_re
 
 void tuh_hid_umount_cb(uint8_t dev_addr, uint8_t instance)
 {
-    (void) dev_addr;
-    (void) instance;
+  uint8_t const itf_protocol = tuh_hid_interface_protocol(dev_addr, instance);
 
     proxy_packet_t pkt = {0};
     pkt.msg_t = PROXY_MSG_UNMOUNT;
-    pkt.dev_t = HID_NONE;
+    pkt.dev_t = get_hid_type(itf_protocol);
     pkt.timestamp_us = time_us_32();
     pkt.report_len = 0;
     (void) proxy_enqueue(&pkt); /* Can check if successful or not */
@@ -111,11 +110,26 @@ static bool inquiry_complete_cb(uint8_t dev_addr, tuh_msc_complete_data_t const 
 //------------- IMPLEMENTATION -------------//
 void tuh_msc_mount_cb(uint8_t dev_addr)
 {
+  proxy_packet_t pkt = {0};
+  pkt.msg_t = PROXY_MSG_MOUNT;
+  pkt.dev_t = MSC;
+  tuh_vid_pid_get(dev_addr, &pkt.vid, &pkt.pid);
+  pkt.timestamp_us = time_us_32();
+  pkt.report_len = 0;
+  (void) proxy_enqueue(&pkt);
+
   uint8_t const lun = 0;
   tuh_msc_inquiry(dev_addr, lun, &inquiry_resp, inquiry_complete_cb, 0);
 }
 
 void tuh_msc_umount_cb(uint8_t dev_addr)
 {
+  proxy_packet_t pkt = {0};
+  pkt.msg_t = PROXY_MSG_UNMOUNT;
+  pkt.dev_t = MSC;
+  pkt.timestamp_us = time_us_32();
+  pkt.report_len = 0;
+  (void) proxy_enqueue(&pkt);
+
   (void) dev_addr;
 }

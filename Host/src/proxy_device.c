@@ -30,6 +30,8 @@ void process_hid()
         if (pkt.msg_t == PROXY_MSG_MOUNT)
         {
             ui_set_vid_pid(pkt.vid, pkt.pid);
+            metrics_record_mount(pkt.dev_t, pkt.vid, pkt.pid);
+            metrics_try_export_cdc();
         }
 
 #if defined(PROXY_FILTERING) && (PROXY_FILTERING == 1)
@@ -38,45 +40,59 @@ void process_hid()
         bool filtering_enabled = false;
 #endif
 
-        enumeration_result_t enum_result = enumerationCheck(&pkt, selected_device);
-        if (enum_result == ENUM_CHECK_UNMOUNT)
+        proxy_device_t event_device = (pkt.dev_t != HID_NONE) ? pkt.dev_t : selected_device;
+        if (pkt.msg_t == PROXY_MSG_UNMOUNT)
         {
             botDetection_reset();
             proxy_queue_reset();
+            kb_latency_pending = false;
+            kb_pending_pkt_timestamp_us = 0;
+            kb_pending_submit_timestamp_us = 0;
+            metrics_reset_transient_state();
             ui_on_unmount();
-            metrics_record_event((detection_event_t){.device_type = selected_device, .event_type = EVENT_DEVICE_UNMOUNTED});
+            metrics_record_event((detection_event_t){.device_type = event_device, .event_type = EVENT_DEVICE_UNMOUNTED});
+            metrics_try_export_cdc();
             return;
-        }
-
-        if (enum_result == ENUM_CHECK_ERROR)
-        {
-            ui_on_enumeration_result(false);
-            metrics_record_event((detection_event_t){.device_type = selected_device, .event_type = EVENT_ENUM_ERROR});
-            metrics_record_enumeration_mismatch();
-
-            if (filtering_enabled)
-            {
-                metrics_record_report_processed(true);
-                return;
-            }
-        }
-
-        if (enum_result == ENUM_CHECK_OK)
-        {
-            ui_on_enumeration_result(true);
-            metrics_record_event((detection_event_t){.device_type = selected_device, .event_type = EVENT_ENUM_OK});
         }
 
         if (filtering_enabled)
         {
+            enumeration_result_t enum_result = enumerationCheck(&pkt, selected_device);
+            if (enum_result == ENUM_CHECK_ERROR)
+            {
+                ui_on_enumeration_result(false);
+                metrics_record_event((detection_event_t){.device_type = event_device, .event_type = EVENT_ENUM_ERROR});
+                metrics_record_enumeration_mismatch();
+                metrics_try_export_cdc();
+
+                metrics_record_report_processed(true);
+                return;
+            }
+
+            if (enum_result == ENUM_CHECK_OK)
+            {
+                ui_on_enumeration_result(true);
+                metrics_record_event((detection_event_t){.device_type = event_device, .event_type = EVENT_ENUM_OK});
+                metrics_try_export_cdc();
+            }
+
             bool bot_detected = botDetection(&pkt);
             if (bot_detected)
             {
                 botDetection_reset();
                 proxy_queue_reset();
+                kb_latency_pending = false;
+                kb_pending_pkt_timestamp_us = 0;
+                kb_pending_submit_timestamp_us = 0;
+                metrics_reset_transient_state();
                 ui_on_security_error();
-                metrics_record_event((detection_event_t){.device_type = selected_device, .event_type = EVENT_BOT_DETECTED});
+                metrics_record_event((detection_event_t){.device_type = event_device, .event_type = EVENT_BOT_DETECTED});
                 metrics_record_report_processed(true);
+                // Drain queued events so BOT_DETECTED is emitted immediately.
+                for (uint8_t i = 0; i < 16; i++)
+                {
+                    metrics_try_export_cdc();
+                }
                 return;
             }
         }
@@ -131,6 +147,8 @@ void process_hid()
             default:
                 break;
         }
+
+        metrics_try_export_cdc();
     }
 }
 uint16_t tud_hid_get_report_cb(uint8_t instance, uint8_t report_id, hid_report_type_t report_type, uint8_t *buffer, uint16_t reqlen)
@@ -168,6 +186,7 @@ void tud_hid_report_complete_cb(uint8_t instance, uint8_t const *report, uint16_
         forwarding_sample_t sample = {
             .sequence = 0,
             .filtering_enabled = kb_pending_filtering_enabled,
+            .had_strike = false,
             .host_ts_us = kb_pending_pkt_timestamp_us,
             .submit_ts_us = kb_pending_submit_timestamp_us,
             .complete_ts_us = complete_ts_us,

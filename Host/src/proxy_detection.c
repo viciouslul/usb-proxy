@@ -119,13 +119,15 @@ static void keyboardDetection(uint8_t* keyboard_data, uint32_t time)
 
                 if (avg < BOT_AVG_THRESHOLD && spread < MIN_SPREAD_THRESHOLD)
                 {
+                    strike_count++;
                     // Mark recent keystrokes as suspicious and trigger bot alert
                     for (int i = 0; i < 4; i++)
                     {
                         metrics_record_keystroke(kb_history[i], current_keycode, true);
                     }
+                    metrics_record_event((detection_event_t){.device_type = HID_KEYBOARD, .event_type = EVENT_STRIKE});
                     memset(kb_history, 0, sizeof(kb_history));
-                    if (strike_count++ >= 3)
+                    if (strike_count >= 4)
                     {
                         bot_detected = true;
                     }

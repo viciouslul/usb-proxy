@@ -14,22 +14,25 @@ typedef struct {
     uint32_t timestamp_us;
 } keystroke_sample_t;
 
+typedef enum {
+    EVENT_ENUM_OK,
+    EVENT_ENUM_ERROR,
+    EVENT_BOT_DETECTED,
+    EVENT_STRIKE,
+    EVENT_DEVICE_SELECTED,
+    EVENT_DEVICE_UNMOUNTED,
+} detection_event_type_t;
+
 typedef struct {
     uint32_t timestamp_us;
     proxy_device_t device_type;
-
-    enum {
-        EVENT_ENUM_OK,
-        EVENT_ENUM_ERROR,
-        EVENT_BOT_DETECTED,
-        EVENT_DEVICE_SELECTED,
-        EVENT_DEVICE_UNMOUNTED,
-    } event_type;
+    detection_event_type_t event_type;
 } detection_event_t;
 
 typedef struct {
     uint32_t sequence;
     bool filtering_enabled;
+    bool had_strike;
     uint32_t host_ts_us;
     uint32_t submit_ts_us;
     uint32_t complete_ts_us;
@@ -40,25 +43,19 @@ typedef struct {
 
 void metrics_init(void);
 
-// Keystroke tracking for RQ2 analysis
 void metrics_record_keystroke(uint32_t interval_us, uint8_t keycode, bool is_suspicious);
-
-// Detection events for RQ1 and RQ3
 void metrics_record_event(detection_event_t event);
+void metrics_record_mount(proxy_device_t device_type, uint16_t vid, uint16_t pid);
 
-// Security stats for RQ1
 void metrics_record_report_processed(bool was_blocked);
 void metrics_record_enumeration_mismatch(void);
+void metrics_reset_transient_state(void);
 
-// Performance tracking for RQ3 (records latency, maintains running average)
 void metrics_record_latency(uint32_t latency_us);
 void metrics_record_forwarding_sample(forwarding_sample_t sample);
 
-// Data export (call periodically, e.g., every 5 seconds)
-// Exports: K (keystroke), E (event), L (latency avg), S (summary)
 void metrics_try_export_cdc(void);
 
-// Query functions
 uint16_t metrics_get_keystroke_count(void);
 uint16_t metrics_get_event_count(void);
 void metrics_get_stats(uint32_t *total_reports, uint32_t *blocked_reports,
