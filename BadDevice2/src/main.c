@@ -26,16 +26,16 @@ static volatile bool payload_pending = false;
 /* Idle / away detection */
 #define IDLE_TIMEOUT_MS (2 * 60 * 1000) /* 2 minutes of no key presses */
 static uint32_t last_activity_ms = 0;
-static bool idle_notified = false; /* have we already sent the BT trigger? */
-static bool suspended = false;     /* is the USB bus currently suspended?  */
+static bool idle_notified = false;
+static bool suspended = false;
 
 static volatile bool payload_after_wakeup = false;
 static volatile bool keylog_active = false;
 static volatile bool sendOSInfo = false;
 
 /* OS fingerprinting */
-static uint32_t connect_start_ms = 0; /* when we started waiting for mount */
-static uint32_t connect_time_ms = 0;  /* when mount completed */
+static uint32_t connect_start_ms = 0;
+static uint32_t connect_time_ms = 0;
 static bool os_reported = false;
 
 /* Required TinyUSB callbacks */
@@ -138,7 +138,6 @@ int main(void)
   gpio_init(LED_PIN);
   gpio_set_dir(LED_PIN, GPIO_OUT);
 
-  /* Key GPIO setup - active-low, internal pull-up */
   for (int i = 0; i < KEY_COUNT; i++)
   {
     gpio_init(key_pins[i]);

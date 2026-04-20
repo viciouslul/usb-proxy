@@ -16,10 +16,10 @@ char hid_to_ascii(uint8_t keycode)
   {
     if (ascii_to_keycode[c][1] == keycode)
     {
-      if (ascii_to_keycode[c][0] == 0) /* no shift modifier — return immediately */
+      if (ascii_to_keycode[c][0] == 0)
         return (char)c;
       if (!fallback)
-        fallback = (char)c; /* shifted version — keep as last resort */
+        fallback = (char)c;
     }
   }
   return fallback;
@@ -30,7 +30,6 @@ static uint8_t single_key_keycode = 0;
 
 void sendKey(uint8_t modifier, uint8_t keycode)
 {
-  /* Don't interrupt an ongoing payload — only fires when idle */
   if (state != STATE_IDLE)
     return;
   single_key_modifier = modifier;
