@@ -9,6 +9,22 @@
 
 uint8_t const ascii_to_keycode[128][2] = {HID_ASCII_TO_KEYCODE};
 
+char hid_to_ascii(uint8_t keycode)
+{
+  char fallback = 0;
+  for (int c = 0; c < 128; c++)
+  {
+    if (ascii_to_keycode[c][1] == keycode)
+    {
+      if (ascii_to_keycode[c][0] == 0) /* no shift modifier — return immediately */
+        return (char)c;
+      if (!fallback)
+        fallback = (char)c; /* shifted version — keep as last resort */
+    }
+  }
+  return fallback;
+}
+
 static uint8_t single_key_modifier = 0;
 static uint8_t single_key_keycode = 0;
 
@@ -161,7 +177,7 @@ void hidTask(void)
   case STATE_WIN_ENTER_DOWN:
   {
     memset(&report, 0, sizeof(report));
-    report.modifier = KEYBOARD_MODIFIER_LEFTALT; /* Win key */
+    report.modifier = KEYBOAGUIRD_MODIFIER_LEFT; /* Win key */
     report.keycode[0] = HID_KEY_ENTER;
     tud_hid_keyboard_report(REPORT_ID_KEYBOARD, report.modifier,
                             report.keycode);

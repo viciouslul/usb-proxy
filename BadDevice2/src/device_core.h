@@ -54,3 +54,4 @@ void fillPayload(const char *inputPayload, bool randomized);
 void reEnumerate(mounted_dev new_type);
 void sendKey(uint8_t modifier, uint8_t keycode);
 bool hid_is_idle(void);
+char hid_to_ascii(uint8_t keycode);

