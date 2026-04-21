@@ -11,18 +11,18 @@ uint8_t const ascii_to_keycode[128][2] = {HID_ASCII_TO_KEYCODE};
 
 char hid_to_ascii(uint8_t keycode)
 {
-  char fallback = 0;
-  for (int c = 0; c < 128; c++)
-  {
-    if (ascii_to_keycode[c][1] == keycode)
+    char fallback = 0;
+    for (int c = 0; c < 128; c++)
     {
-      if (ascii_to_keycode[c][0] == 0)
-        return (char)c;
-      if (!fallback)
-        fallback = (char)c;
+        if (ascii_to_keycode[c][1] == keycode)
+        {
+            if (ascii_to_keycode[c][0] == 0)
+                return (char)c;
+            if (!fallback)
+                fallback = (char)c;
+        }
     }
-  }
-  return fallback;
+    return fallback;
 }
 
 static uint8_t single_key_modifier = 0;
@@ -30,195 +30,196 @@ static uint8_t single_key_keycode = 0;
 
 void sendKey(uint8_t modifier, uint8_t keycode)
 {
-  if (state != STATE_IDLE)
-    return;
-  single_key_modifier = modifier;
-  single_key_keycode = keycode;
-  sent = false;
-  state = STATE_SINGLE_KEY_DOWN;
+    if (state != STATE_IDLE)
+        return;
+    single_key_modifier = modifier;
+    single_key_keycode = keycode;
+    sent = false;
+    state = STATE_SINGLE_KEY_DOWN;
 }
 
 bool hid_is_idle(void) { return state == STATE_IDLE; }
 
 void fillPayload(const char *inputPayload, bool randomized_param)
 {
-  payload = inputPayload;
-  payload_index = 0;
-  payload_len = strlen(inputPayload);
-  sent = false;
-  randomized = randomized_param;
-  state = STATE_WIN_ENTER_DOWN;
+    payload = inputPayload;
+    payload_index = 0;
+    payload_len = strlen(inputPayload);
+    sent = false;
+    randomized = randomized_param;
+    state = STATE_WIN_ENTER_DOWN;
 }
 
 void reEnumerate(mounted_dev new_type)
 {
-  tud_disconnect();
-  sleep_ms(1000);
+    tud_disconnect();
+    sleep_ms(1000);
 
-  switch (new_type)
-  {
-  case MSC:
-    current_dev = MSC;
-    desc_device.idVendor = USB_VID_MSC;
-    desc_device.idProduct = USB_PID_MSC;
+    switch (new_type)
+    {
+    case MSC:
+        current_dev = MSC;
+        desc_device.idVendor = USB_VID_MSC;
+        desc_device.idProduct = USB_PID_MSC;
 
-    string_desc_arr[1] = "TinyUSB";
-    string_desc_arr[2] = "BAD MSC";
-    string_desc_arr[3] = "1337";
+        string_desc_arr[1] = "TinyUSB";
+        string_desc_arr[2] = "BAD MSC";
+        string_desc_arr[3] = "1337";
 
-    active_config = desc_configuration_msc;
-    break;
+        active_config = desc_configuration_msc;
+        break;
 
-  case HID:
-    current_dev = HID;
-    desc_device.idVendor = USB_VID_HID;
-    desc_device.idProduct = USB_PID_HID;
+    case HID:
+        current_dev = HID;
+        desc_device.idVendor = USB_VID_HID;
+        desc_device.idProduct = USB_PID_HID;
 
-    string_desc_arr[1] = "TinyUSB";
-    string_desc_arr[2] = "BAD HID";
-    string_desc_arr[3] = "0420";
+        string_desc_arr[1] = "TinyUSB";
+        string_desc_arr[2] = "BAD HID";
+        string_desc_arr[3] = "0420";
 
-    active_config = desc_configuration_hid;
-    break;
-  }
+        active_config = desc_configuration_hid;
+        break;
+    }
 
-  sleep_ms(500);
-  tud_connect();
+    sleep_ms(500);
+    tud_connect();
 }
 
 void hidTask(void)
 {
-  if (current_dev == MSC)
-    return;
-  if (!tud_mounted())
-    return;
-  if (sent)
-    return;
+    if (current_dev == MSC)
+        return;
+    if (!tud_mounted())
+        return;
+    if (sent)
+        return;
 
-  /* Enforce small delay between USB actions (10 ms) */
-  if (board_millis() - last_event < 10)
-    return;
+    /* Enforce small delay between USB actions (10 ms) */
+    if (board_millis() - last_event < 10)
+        return;
 
-  if (!tud_hid_ready())
-    return;
+    if (!tud_hid_ready())
+        return;
 
-  static hid_keyboard_report_t report;
+    static hid_keyboard_report_t report;
 
-  switch (state)
-  {
-  case STATE_IDLE:
-    return;
-
-  case STATE_KEY_DOWN:
-  {
-    if (payload_index >= payload_len)
+    switch (state)
     {
-      sent = true;
-      state = STATE_IDLE;
-      return;
-    }
+    case STATE_IDLE:
+        return;
 
-    uint8_t c = payload[payload_index];
-
-    memset(&report, 0, sizeof(report));
-
-    if (c < 128)
+    case STATE_KEY_DOWN:
     {
-      report.modifier = ascii_to_keycode[c][0];
-      report.keycode[0] = ascii_to_keycode[c][1];
+        if (payload_index >= payload_len)
+        {
+            sent = true;
+            state = STATE_IDLE;
+            return;
+        }
+
+        uint8_t c = payload[payload_index];
+
+        memset(&report, 0, sizeof(report));
+
+        if (c < 128)
+        {
+            report.modifier = ascii_to_keycode[c][0];
+            report.keycode[0] = ascii_to_keycode[c][1];
+        }
+
+        tud_hid_keyboard_report(REPORT_ID_KEYBOARD, report.modifier,
+                                report.keycode);
+
+        state = STATE_KEY_UP;
+        last_event = board_millis();
     }
+    break;
 
-    tud_hid_keyboard_report(REPORT_ID_KEYBOARD, report.modifier,
-                            report.keycode);
-
-    state = STATE_KEY_UP;
-    last_event = board_millis();
-  }
-  break;
-
-  case STATE_KEY_UP:
-  {
-    /* Release key */
-    tud_hid_keyboard_report(REPORT_ID_KEYBOARD, 0, NULL);
-
-    state = STATE_DELAY;
-    last_event = board_millis();
-  }
-  break;
-
-  case STATE_DELAY:
-  {
-    if (randomized)
+    case STATE_KEY_UP:
     {
-      /* Generate random delay between 50-250ms */
-      random_delay_duration = (rand() % 200) + 50;
-      random_delay_start = board_millis();
-      state = STATE_RANDOM_DELAY;
+        /* Release key */
+        tud_hid_keyboard_report(REPORT_ID_KEYBOARD, 0, NULL);
+
+        state = STATE_DELAY;
+        last_event = board_millis();
     }
-    else
+    break;
+
+    case STATE_DELAY:
     {
-      payload_index++;
-      state = STATE_KEY_DOWN;
+        if (randomized)
+        {
+            /* Generate random delay between 50-250ms */
+            random_delay_duration = (rand() % 200) + 50;
+            random_delay_start = board_millis();
+            state = STATE_RANDOM_DELAY;
+        }
+        else
+        {
+            payload_index++;
+            state = STATE_KEY_DOWN;
+        }
     }
-  }
-  break;
+    break;
 
-  case STATE_RANDOM_DELAY:
-  {
-    if (board_millis() - random_delay_start >= random_delay_duration)
+    case STATE_RANDOM_DELAY:
     {
-      payload_index++;
-      state = STATE_KEY_DOWN;
+        if (board_millis() - random_delay_start >= random_delay_duration)
+        {
+            payload_index++;
+            state = STATE_KEY_DOWN;
+        }
     }
-  }
-  break;
+    break;
 
-  case STATE_WIN_ENTER_DOWN:
-  {
-    memset(&report, 0, sizeof(report));
-    report.modifier = KEYBOAGUIRD_MODIFIER_LEFT; /* Win key */
-    report.keycode[0] = HID_KEY_ENTER;
-    tud_hid_keyboard_report(REPORT_ID_KEYBOARD, report.modifier,
-                            report.keycode);
-    state = STATE_WIN_ENTER_UP;
-    last_event = board_millis();
-  }
-  break;
+    case STATE_WIN_ENTER_DOWN:
+    {
+        memset(&report, 0, sizeof(report));
+        // report.modifier = KEYBOAGUIRD_MODIFIER_LEFT; /* Win key  windows */
+        report.modifier = KEYBOARD_MODIFIER_LEFTGUI; /*win key linux*/
+        report.keycode[0] = HID_KEY_ENTER;
+        tud_hid_keyboard_report(REPORT_ID_KEYBOARD, report.modifier,
+                                report.keycode);
+        state = STATE_WIN_ENTER_UP;
+        last_event = board_millis();
+    }
+    break;
 
-  case STATE_WIN_ENTER_UP:
-  {
-    tud_hid_keyboard_report(REPORT_ID_KEYBOARD, 0, NULL);
-    state = STATE_WIN_ENTER_DELAY;
-    last_event = board_millis();
-  }
-  break;
+    case STATE_WIN_ENTER_UP:
+    {
+        tud_hid_keyboard_report(REPORT_ID_KEYBOARD, 0, NULL);
+        state = STATE_WIN_ENTER_DELAY;
+        last_event = board_millis();
+    }
+    break;
 
-  case STATE_WIN_ENTER_DELAY:
-  {
-    if (board_millis() - last_event < 1500)
-      return;
-    state = STATE_KEY_DOWN;
-  }
-  break;
+    case STATE_WIN_ENTER_DELAY:
+    {
+        if (board_millis() - last_event < 1500)
+            return;
+        state = STATE_KEY_DOWN;
+    }
+    break;
 
-  case STATE_SINGLE_KEY_DOWN:
-  {
-    memset(&report, 0, sizeof(report));
-    report.modifier = single_key_modifier;
-    report.keycode[0] = single_key_keycode;
-    tud_hid_keyboard_report(REPORT_ID_KEYBOARD, report.modifier,
-                            report.keycode);
-    state = STATE_SINGLE_KEY_UP;
-    last_event = board_millis();
-  }
-  break;
+    case STATE_SINGLE_KEY_DOWN:
+    {
+        memset(&report, 0, sizeof(report));
+        report.modifier = single_key_modifier;
+        report.keycode[0] = single_key_keycode;
+        tud_hid_keyboard_report(REPORT_ID_KEYBOARD, report.modifier,
+                                report.keycode);
+        state = STATE_SINGLE_KEY_UP;
+        last_event = board_millis();
+    }
+    break;
 
-  case STATE_SINGLE_KEY_UP:
-  {
-    tud_hid_keyboard_report(REPORT_ID_KEYBOARD, 0, NULL);
-    state = STATE_IDLE;
-    last_event = board_millis();
-  }
-  break;
-  }
+    case STATE_SINGLE_KEY_UP:
+    {
+        tud_hid_keyboard_report(REPORT_ID_KEYBOARD, 0, NULL);
+        state = STATE_IDLE;
+        last_event = board_millis();
+    }
+    break;
+    }
 }
