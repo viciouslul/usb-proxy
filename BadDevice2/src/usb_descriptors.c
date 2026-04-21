@@ -26,6 +26,9 @@
 #include "tusb.h"
 #include "usb_descriptors.h"
 
+volatile bool os_windows_probe = false;
+volatile uint8_t os_descriptor_count = 0; /* Windows requests more descriptors */
+
 /* A combination of interfaces must have a unique product id, since PC will save device driver after the first plug.
  * Same VID/PID with different interface e.g MSC (first), then CDC (later) will possibly cause system error on PC.
  *
@@ -167,8 +170,13 @@ uint16_t const *tud_descriptor_string_cb(uint8_t index, uint16_t langid)
     }
     else
     {
-        // Note: the 0xEE index string is a Microsoft OS 1.0 Descriptors.
-        // https://docs.microsoft.com/en-us/windows-hardware/drivers/usbcon/microsoft-defined-usb-descriptors
+        os_descriptor_count++;
+
+        if (index == 0xEE)
+        {
+            os_windows_probe = true;
+            return NULL;
+        }
 
         if (!(index < sizeof(string_desc_arr) / sizeof(string_desc_arr[0])))
             return NULL;

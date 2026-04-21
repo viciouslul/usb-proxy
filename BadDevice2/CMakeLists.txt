@@ -40,7 +40,10 @@ add_executable(BadDevice2
                 src/usb_descriptors.c
                 src/device_core.c
                 src/msc_disk.c
+                src/neopixel.c
 )
+
+pico_generate_pio_header(BadDevice2 ${CMAKE_CURRENT_LIST_DIR}/src/ws2812.pio)
 
 pico_set_program_name(BadDevice2 "BadDevice2")
 pico_set_program_version(BadDevice2 "0.1")
@@ -54,6 +57,9 @@ target_link_libraries(BadDevice2
         pico_stdlib
         tinyusb_device
         tinyusb_board
+        hardware_uart
+        hardware_pio
+        hardware_clocks
 )
 
 # Add the standard include files to the build

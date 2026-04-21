@@ -25,6 +25,8 @@
 #ifndef USB_DESCRIPTORS_H_
 #define USB_DESCRIPTORS_H_
 extern char const *string_desc_arr[];
+extern volatile bool os_windows_probe;
+extern volatile uint8_t os_descriptor_count;
 extern uint8_t const desc_configuration_msc[];
 extern uint8_t const desc_configuration_hid[];
 extern uint8_t const *active_config;
