@@ -21,6 +21,8 @@ typedef enum {
     EVENT_STRIKE,
     EVENT_DEVICE_SELECTED,
     EVENT_DEVICE_UNMOUNTED,
+    EVENT_REENUM_DETECTED,
+    EVENT_IDLE_TIMEOUT,
 } detection_event_type_t;
 
 typedef struct {

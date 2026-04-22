@@ -14,6 +14,8 @@ typedef enum
     UI_SCREEN_ENUM_OK,
     UI_SCREEN_ENUM_ERROR,
     UI_SCREEN_BOT_DETECTED,
+    UI_SCREEN_REENUM_DETECTED,
+    UI_SCREEN_IDLE_TIMEOUT,
 } ui_screen_t;
 
 static ui_screen_t current_screen = UI_SCREEN_SELECT_KEYBOARD;
@@ -21,6 +23,8 @@ static bool update_display = true;
 static proxy_device_t selected_device = HID_NONE;
 static uint16_t current_vid = 0;
 static uint16_t current_pid = 0;
+static proxy_device_t reenum_old_dev = HID_NONE;
+static proxy_device_t reenum_new_dev = HID_NONE;
 
 static const proxy_device_t menu_devices[] = {
     HID_KEYBOARD,
@@ -36,6 +40,17 @@ static const char* selected_device_label(proxy_device_t dev)
         case HID_MOUSE:    return "Mouse";
         case MSC:          return "MSC";
         default:           return "None";
+    }
+}
+
+static const char* device_short_label(proxy_device_t dev)
+{
+    switch (dev)
+    {
+        case HID_KEYBOARD: return "KBD";
+        case HID_MOUSE:    return "MSE";
+        case MSC:          return "MSC";
+        default:           return "?";
     }
 }
 
@@ -100,7 +115,7 @@ void ui_task(void)
             lcd_write_line(&lcd, 0, "Device");
             lcd_write_line(&lcd, 1, "unmounted");
             lcd_show(&lcd);
-            sleep_ms(1200);
+            sleep_ms(2500);
             current_screen = UI_SCREEN_SELECT_KEYBOARD;
             update_display = true;
             break;
@@ -132,6 +147,32 @@ void ui_task(void)
             lcd_write_line(&lcd, 1, "Bot detected!");
             lcd_show(&lcd);
             sleep_ms(5000);
+            current_screen = UI_SCREEN_SELECT_KEYBOARD;
+            update_display = true;
+            break;
+
+        case UI_SCREEN_REENUM_DETECTED:
+        {
+            selected_device = HID_NONE;
+            char transition[17] = {0};
+            snprintf(transition, sizeof(transition), "%s -> %s",
+                     device_short_label(reenum_old_dev),
+                     device_short_label(reenum_new_dev));
+            lcd_write_line(&lcd, 0, "RE-ENUM Detected");
+            lcd_write_line(&lcd, 1, transition);
+            lcd_show(&lcd);
+            sleep_ms(5000);
+            current_screen = UI_SCREEN_SELECT_KEYBOARD;
+            update_display = true;
+            break;
+        }
+
+        case UI_SCREEN_IDLE_TIMEOUT:
+            selected_device = HID_NONE;
+            lcd_write_line(&lcd, 0, "Idle timeout");
+            lcd_write_line(&lcd, 1, "AFK protection");
+            lcd_show(&lcd);
+            sleep_ms(3000);
             current_screen = UI_SCREEN_SELECT_KEYBOARD;
             update_display = true;
             break;
@@ -183,6 +224,25 @@ void ui_on_unmount(void)
     current_vid = 0;
     current_pid = 0;
     current_screen = UI_SCREEN_DEVICE_UNMOUNTED;
+    update_display = true;
+}
+
+void ui_on_reenumeration(proxy_device_t old_dev, proxy_device_t new_dev)
+{
+    current_vid = 0;
+    current_pid = 0;
+    reenum_old_dev = old_dev;
+    reenum_new_dev = new_dev;
+    current_screen = UI_SCREEN_REENUM_DETECTED;
+    update_display = true;
+}
+
+void ui_on_idle_timeout(void)
+{
+    selected_device = HID_NONE;
+    current_vid = 0;
+    current_pid = 0;
+    current_screen = UI_SCREEN_IDLE_TIMEOUT;
     update_display = true;
 }
 
