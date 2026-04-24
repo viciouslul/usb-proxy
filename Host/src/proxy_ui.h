@@ -1,7 +1,7 @@
 #pragma once
 
-#include <stdbool.h>
 #include "proxy_data.h"
+#include <stdbool.h>
 
 void ui_init(void);
 void ui_task(void);
@@ -17,4 +17,4 @@ void ui_on_reenumeration(proxy_device_t old_dev, proxy_device_t new_dev);
 void ui_on_idle_timeout(void);
 
 proxy_device_t ui_get_selected_device(void);
-bool ui_has_selected_device(void);
+bool           ui_has_selected_device(void);

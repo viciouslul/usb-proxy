@@ -1,12 +1,12 @@
 #include "proxy_device.h"
-#include "tusb.h"
-#include "proxy_metrics.h"
 #include "pico/stdlib.h"
+#include "proxy_metrics.h"
+#include "tusb.h"
 
-static bool kb_latency_pending = false;
-static uint32_t kb_pending_pkt_timestamp_us = 0;
+static bool     kb_latency_pending             = false;
+static uint32_t kb_pending_pkt_timestamp_us    = 0;
 static uint32_t kb_pending_submit_timestamp_us = 0;
-static bool kb_pending_filtering_enabled = false;
+static bool     kb_pending_filtering_enabled   = false;
 
 // A physical unplug + replug is bounded below by human motor timing; anything
 // faster than this is software re-enumeration (BadUSB-style spoof).
@@ -15,24 +15,24 @@ static bool kb_pending_filtering_enabled = false;
 // AFK protection: force a re-selection if no HID activity for this long.
 #define IDLE_TIMEOUT_US (1 * 60 * 1000000) / 2
 
-static bool pending_unmount = false;
-static uint32_t pending_unmount_ts_us = 0;
+static bool           pending_unmount        = false;
+static uint32_t       pending_unmount_ts_us  = 0;
 static proxy_device_t pending_unmount_device = HID_NONE;
 
-static bool idle_armed = false;
+static bool     idle_armed       = false;
 static uint32_t last_activity_us = 0;
 
 static void commit_pending_unmount(void)
 {
-    proxy_device_t dev = pending_unmount_device;
-    pending_unmount = false;
-    pending_unmount_ts_us = 0;
+    proxy_device_t dev     = pending_unmount_device;
+    pending_unmount        = false;
+    pending_unmount_ts_us  = 0;
     pending_unmount_device = HID_NONE;
 
     botDetection_reset();
     proxy_queue_reset();
-    kb_latency_pending = false;
-    kb_pending_pkt_timestamp_us = 0;
+    kb_latency_pending             = false;
+    kb_pending_pkt_timestamp_us    = 0;
     kb_pending_submit_timestamp_us = 0;
     metrics_reset_transient_state();
     idle_armed = false;
@@ -43,15 +43,15 @@ static void commit_pending_unmount(void)
 
 static void commit_idle_timeout(proxy_device_t dev)
 {
-    idle_armed = false;
-    pending_unmount = false;
-    pending_unmount_ts_us = 0;
+    idle_armed             = false;
+    pending_unmount        = false;
+    pending_unmount_ts_us  = 0;
     pending_unmount_device = HID_NONE;
 
     botDetection_reset();
     proxy_queue_reset();
-    kb_latency_pending = false;
-    kb_pending_pkt_timestamp_us = 0;
+    kb_latency_pending             = false;
+    kb_pending_pkt_timestamp_us    = 0;
     kb_pending_submit_timestamp_us = 0;
     metrics_reset_transient_state();
     ui_on_idle_timeout();
@@ -79,7 +79,7 @@ void process_hid()
     {
         if (!idle_armed)
         {
-            idle_armed = true;
+            idle_armed       = true;
             last_activity_us = time_us_32();
         }
         else if ((time_us_32() - last_activity_us) >= IDLE_TIMEOUT_US)
@@ -93,10 +93,11 @@ void process_hid()
         idle_armed = false;
     }
 
-    while(proxy_dequeue(&pkt))
+    while (proxy_dequeue(&pkt))
     {
         proxy_device_t selected_device = ui_get_selected_device();
-        if (selected_device == HID_NONE) return;
+        if (selected_device == HID_NONE)
+            return;
 
         if (pkt.msg_t == PROXY_MSG_REPORT)
         {
@@ -115,14 +116,14 @@ void process_hid()
                 proxy_device_t old_dev = pending_unmount_device;
                 proxy_device_t new_dev = pkt.dev_t;
 
-                pending_unmount = false;
-                pending_unmount_ts_us = 0;
+                pending_unmount        = false;
+                pending_unmount_ts_us  = 0;
                 pending_unmount_device = HID_NONE;
 
                 botDetection_reset();
                 proxy_queue_reset();
-                kb_latency_pending = false;
-                kb_pending_pkt_timestamp_us = 0;
+                kb_latency_pending             = false;
+                kb_pending_pkt_timestamp_us    = 0;
                 kb_pending_submit_timestamp_us = 0;
                 metrics_reset_transient_state();
                 ui_on_reenumeration(old_dev, new_dev);
@@ -153,8 +154,8 @@ void process_hid()
         proxy_device_t event_device = (pkt.dev_t != HID_NONE) ? pkt.dev_t : selected_device;
         if (pkt.msg_t == PROXY_MSG_UNMOUNT)
         {
-            pending_unmount = true;
-            pending_unmount_ts_us = pkt.timestamp_us;
+            pending_unmount        = true;
+            pending_unmount_ts_us  = pkt.timestamp_us;
             pending_unmount_device = event_device;
             return;
         }
@@ -185,8 +186,8 @@ void process_hid()
             {
                 botDetection_reset();
                 proxy_queue_reset();
-                kb_latency_pending = false;
-                kb_pending_pkt_timestamp_us = 0;
+                kb_latency_pending             = false;
+                kb_pending_pkt_timestamp_us    = 0;
                 kb_pending_submit_timestamp_us = 0;
                 metrics_reset_transient_state();
                 ui_on_security_error();
@@ -201,55 +202,55 @@ void process_hid()
             }
         }
 
-        switch(pkt.msg_t)
+        switch (pkt.msg_t)
         {
-            case PROXY_MSG_REPORT:
-                if(pkt.dev_t == HID_KEYBOARD)
+        case PROXY_MSG_REPORT:
+            if (pkt.dev_t == HID_KEYBOARD)
+            {
+                bool any_key_down = false;
+                for (uint16_t i = 2; i < pkt.report_len && i < 8; i++)
                 {
-                    bool any_key_down = false;
-                    for (uint16_t i = 2; i < pkt.report_len && i < 8; i++)
+                    if (pkt.report[i] != 0)
                     {
-                        if (pkt.report[i] != 0)
-                        {
-                            any_key_down = true;
-                            break;
-                        }
-                    }
-
-                    bool sent = tud_hid_report(pkt.dev_t, pkt.report, pkt.report_len);
-                    if (sent)
-                    {
-                        metrics_record_report_processed(false);
-                        if (any_key_down)
-                        {
-                            // Measure end-to-end latency when USB transfer completes.
-                            kb_pending_pkt_timestamp_us = pkt.timestamp_us;
-                            kb_pending_submit_timestamp_us = time_us_32();
-                            kb_pending_filtering_enabled = filtering_enabled;
-                            kb_latency_pending = true;
-                        }
+                        any_key_down = true;
+                        break;
                     }
                 }
-                else if(pkt.dev_t == HID_MOUSE)
+
+                bool sent = tud_hid_report(pkt.dev_t, pkt.report, pkt.report_len);
+                if (sent)
                 {
-                    tud_hid_report(pkt.dev_t, pkt.report, pkt.report_len);
                     metrics_record_report_processed(false);
+                    if (any_key_down)
+                    {
+                        // Measure end-to-end latency when USB transfer completes.
+                        kb_pending_pkt_timestamp_us    = pkt.timestamp_us;
+                        kb_pending_submit_timestamp_us = time_us_32();
+                        kb_pending_filtering_enabled   = filtering_enabled;
+                        kb_latency_pending             = true;
+                    }
                 }
-                break;
-
-            case PROXY_MSG_MOUNT:
+            }
+            else if (pkt.dev_t == HID_MOUSE)
+            {
                 tud_hid_report(pkt.dev_t, pkt.report, pkt.report_len);
-                break;
+                metrics_record_report_processed(false);
+            }
+            break;
 
-            case PROXY_MSG_UNMOUNT:
-                break;
+        case PROXY_MSG_MOUNT:
+            tud_hid_report(pkt.dev_t, pkt.report, pkt.report_len);
+            break;
 
-            case PROXY_MSG_NONE:
-                //do nothing
-                break;
+        case PROXY_MSG_UNMOUNT:
+            break;
 
-            default:
-                break;
+        case PROXY_MSG_NONE:
+            // do nothing
+            break;
+
+        default:
+            break;
         }
 
         metrics_try_export_cdc();
@@ -264,21 +265,21 @@ void process_hid()
 }
 uint16_t tud_hid_get_report_cb(uint8_t instance, uint8_t report_id, hid_report_type_t report_type, uint8_t *buffer, uint16_t reqlen)
 {
-    (void) instance;
-    (void) report_id;
-    (void) report_type;
-    (void) buffer;
-    (void) reqlen;
+    (void)instance;
+    (void)report_id;
+    (void)report_type;
+    (void)buffer;
+    (void)reqlen;
     return 0;
 }
 
 void tud_hid_set_report_cb(uint8_t instance, uint8_t report_id, hid_report_type_t report_type, uint8_t const *buffer, uint16_t bufsize)
 {
-    (void) instance;
-    (void) report_id;
-    (void) report_type;
-    (void) buffer;
-    (void) bufsize;
+    (void)instance;
+    (void)report_id;
+    (void)report_type;
+    (void)buffer;
+    (void)bufsize;
 }
 
 void tud_hid_report_complete_cb(uint8_t instance, uint8_t const *report, uint16_t len)
@@ -290,20 +291,20 @@ void tud_hid_report_complete_cb(uint8_t instance, uint8_t const *report, uint16_
     if (kb_latency_pending)
     {
         uint32_t complete_ts_us = time_us_32();
-        uint32_t queue_us = kb_pending_submit_timestamp_us - kb_pending_pkt_timestamp_us;
-        uint32_t usb_us = complete_ts_us - kb_pending_submit_timestamp_us;
-        uint32_t total_us = complete_ts_us - kb_pending_pkt_timestamp_us;
+        uint32_t queue_us       = kb_pending_submit_timestamp_us - kb_pending_pkt_timestamp_us;
+        uint32_t usb_us         = complete_ts_us - kb_pending_submit_timestamp_us;
+        uint32_t total_us       = complete_ts_us - kb_pending_pkt_timestamp_us;
 
         forwarding_sample_t sample = {
-            .sequence = 0,
+            .sequence          = 0,
             .filtering_enabled = kb_pending_filtering_enabled,
-            .had_strike = false,
-            .host_ts_us = kb_pending_pkt_timestamp_us,
-            .submit_ts_us = kb_pending_submit_timestamp_us,
-            .complete_ts_us = complete_ts_us,
-            .queue_us = queue_us,
-            .usb_us = usb_us,
-            .total_us = total_us,
+            .had_strike        = false,
+            .host_ts_us        = kb_pending_pkt_timestamp_us,
+            .submit_ts_us      = kb_pending_submit_timestamp_us,
+            .complete_ts_us    = complete_ts_us,
+            .queue_us          = queue_us,
+            .usb_us            = usb_us,
+            .total_us          = total_us,
         };
 
         metrics_record_forwarding_sample(sample);

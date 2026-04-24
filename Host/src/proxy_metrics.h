@@ -1,20 +1,22 @@
 #pragma once
 
-#include <stdint.h>
-#include <stdbool.h>
 #include "proxy_data.h"
+#include <stdbool.h>
+#include <stdint.h>
 
 #define METRICS_KEYSTROKE_HISTORY_SIZE 256
 #define METRICS_DETECTION_EVENT_SIZE   64
 
-typedef struct {
+typedef struct
+{
     uint32_t interval_us;
-    uint8_t keycode;
-    bool is_suspicious;
+    uint8_t  keycode;
+    bool     is_suspicious;
     uint32_t timestamp_us;
 } keystroke_sample_t;
 
-typedef enum {
+typedef enum
+{
     EVENT_ENUM_OK,
     EVENT_ENUM_ERROR,
     EVENT_BOT_DETECTED,
@@ -25,16 +27,18 @@ typedef enum {
     EVENT_IDLE_TIMEOUT,
 } detection_event_type_t;
 
-typedef struct {
-    uint32_t timestamp_us;
-    proxy_device_t device_type;
+typedef struct
+{
+    uint32_t               timestamp_us;
+    proxy_device_t         device_type;
     detection_event_type_t event_type;
 } detection_event_t;
 
-typedef struct {
+typedef struct
+{
     uint32_t sequence;
-    bool filtering_enabled;
-    bool had_strike;
+    bool     filtering_enabled;
+    bool     had_strike;
     uint32_t host_ts_us;
     uint32_t submit_ts_us;
     uint32_t complete_ts_us;
@@ -60,5 +64,5 @@ void metrics_try_export_cdc(void);
 
 uint16_t metrics_get_keystroke_count(void);
 uint16_t metrics_get_event_count(void);
-void metrics_get_stats(uint32_t *total_reports, uint32_t *blocked_reports,
-                       uint32_t *enum_mismatches, uint32_t *mean_latency_us);
+void     metrics_get_stats(uint32_t *total_reports, uint32_t *blocked_reports,
+                           uint32_t *enum_mismatches, uint32_t *mean_latency_us);
