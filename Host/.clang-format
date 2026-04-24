@@ -21,3 +21,4 @@ AlignTrailingComments:
   Kind: Always
   OverEmptyLines: 0
 BreakBeforeBraces: Allman
+AllowShortLoopsOnASingleLine: true

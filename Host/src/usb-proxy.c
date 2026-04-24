@@ -9,6 +9,7 @@
 #include "proxy_metrics.h"
 #include "proxy_ssd1306.h"
 #include "proxy_ui.h"
+#include "proxy_whitelist.h"
 
 #define SCROLL_BTN 26 // A0
 #define SCROLL_GND 27 // A1
@@ -82,6 +83,8 @@ void global_init()
     gpio_init(SCROLL_GND);
     gpio_set_dir(SCROLL_GND, GPIO_OUT);
     gpio_put(SCROLL_GND, 0);
+
+    whitelist_init();
 }
 
 void core1_main()

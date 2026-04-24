@@ -18,3 +18,6 @@ void ui_on_idle_timeout(void);
 
 proxy_device_t ui_get_selected_device(void);
 bool           ui_has_selected_device(void);
+bool           ui_is_whitelist_enabled(void);
+bool           ui_is_whitelist_add_mode(void);
+void           ui_on_whitelist_device_connected(uint16_t vid, uint16_t pid);

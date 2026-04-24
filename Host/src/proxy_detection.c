@@ -12,25 +12,22 @@ static uint8_t  strike_count      = 0;
 
 static void mouseDetection(uint8_t *mouse_data);
 static void keyboardDetection(uint8_t *keyboard_data, uint32_t time);
+static void packageValidation(uint8_t *report, uint16_t report_len, proxy_device_t dev_t);
+
 static bool bot_detected = false;
 
-bool botDetection(proxy_packet_t *pkt)
+bool filterPacket(proxy_packet_t *pkt)
 {
     if (pkt->msg_t == PROXY_MSG_REPORT)
     {
         if (pkt->dev_t == HID_KEYBOARD)
         {
-            /*do some checks*/
-            // 1. Length Check: Catch malformed/malicious packets
-            // if (pkt->report_len != 8) while(1);
-
-            // 2. Reserved Byte Check: Catch non-spec-compliant bot hardware
-            // if (pkt->report[1] != 0x00) while(1);
-
+            packageValidation(pkt->report, pkt->report_len, pkt->dev_t);
             keyboardDetection(pkt->report, pkt->timestamp_us);
         }
         else if (pkt->dev_t == HID_MOUSE)
         {
+            packageValidation(pkt->report, pkt->report_len, pkt->dev_t);
             mouseDetection(pkt->report);
         }
     }
@@ -71,8 +68,7 @@ static void keyboardDetection(uint8_t *keyboard_data, uint32_t time)
             uint8_t key  = keyboard_data[i]; // check the key
 
             bool already_pressed = false;
-            for (int j = 2; j < 8;
-                 j++) // check if this key was present in the previous report
+            for (int j = 2; j < 8; j++) // check if this key was present in the previous report
             {
                 if (kb_prev_report[j] == key)
                 {
@@ -149,7 +145,7 @@ static void keyboardDetection(uint8_t *keyboard_data, uint32_t time)
     memcpy(kb_prev_report, keyboard_data, 8);
 }
 
-void botDetection_reset(void)
+void pktFilterReset(void)
 {
     kb_last         = 0;
     mouse_last      = 0;
@@ -188,4 +184,51 @@ enumeration_result_t enumerationCheck(proxy_packet_t *pkt,
     }
 
     return ENUM_CHECK_NONE;
+}
+
+static void packageValidation(uint8_t *report, uint16_t report_len, proxy_device_t dev_t)
+{
+    switch (dev_t)
+    {
+    case HID_KEYBOARD:
+        if (report_len != 8)
+        {
+            bot_detected = true;
+            return;
+        }
+        // Reserved byte must be 0x00 per HID boot protocol spec
+        if (report[1] != 0x00)
+        {
+            bot_detected = true;
+            return;
+        }
+        // Keycodes above 0xE7 are not defined in HID usage tables
+        for (int i = 2; i < 8; i++)
+        {
+            if (report[i] != 0x00 && report[i] > 0xE7)
+            {
+                bot_detected = true;
+                return;
+            }
+        }
+        break;
+
+    case HID_MOUSE:
+        // we are assuming its a "normal" mouse with m1, m2, scroll, sensor.
+        if (report_len < 3 || report_len > 4)
+        {
+            bot_detected = true;
+            return;
+        }
+        // Only bits 0-2 are valid (left, right, middle); bits 3-7 should never be set
+        if (report[0] & 0xF8)
+        {
+            bot_detected = true;
+            return;
+        }
+        break;
+
+    default:
+        break;
+    }
 }

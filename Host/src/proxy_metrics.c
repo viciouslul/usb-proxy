@@ -116,7 +116,7 @@ void metrics_record_event(detection_event_t event)
     case EVENT_ENUM_ERROR:
         code = 'R';
         break;
-    case EVENT_BOT_DETECTED:
+    case EVENT_PKT_BLOCKED:
         code = 'B';
         break;
     case EVENT_STRIKE:

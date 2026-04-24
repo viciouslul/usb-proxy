@@ -47,6 +47,7 @@ add_executable(usb-proxy
         src/proxy_ui.c
         src/proxy_metrics.c
         src/proxy_ssd1306.c
+        src/proxy_whitelist.c
 )
 target_sources(usb-proxy PRIVATE
     src/usb-proxy.c
@@ -58,6 +59,7 @@ target_sources(usb-proxy PRIVATE
     src/proxy_ui.c
     src/proxy_metrics.c
     src/proxy_ssd1306.c
+    src/proxy_whitelist.c
     ${PICO_TINYUSB_PATH}/src/portable/raspberrypi/pio_usb/dcd_pio_usb.c
     ${PICO_TINYUSB_PATH}/src/portable/raspberrypi/pio_usb/hcd_pio_usb.c
 )
@@ -81,6 +83,8 @@ target_link_libraries(usb-proxy
         pico_pio_usb
         pico_multicore
         hardware_i2c
+        hardware_flash
+        pico_flash
 )
 # use tinyusb implementation
 target_compile_definitions(usb-proxy PRIVATE

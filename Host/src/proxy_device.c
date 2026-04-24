@@ -1,6 +1,7 @@
 #include "proxy_device.h"
 #include "pico/stdlib.h"
 #include "proxy_metrics.h"
+#include "proxy_whitelist.h"
 #include "tusb.h"
 
 static bool     kb_latency_pending             = false;
@@ -29,7 +30,7 @@ static void commit_pending_unmount(void)
     pending_unmount_ts_us  = 0;
     pending_unmount_device = HID_NONE;
 
-    botDetection_reset();
+    pktFilterReset();
     proxy_queue_reset();
     kb_latency_pending             = false;
     kb_pending_pkt_timestamp_us    = 0;
@@ -48,7 +49,7 @@ static void commit_idle_timeout(proxy_device_t dev)
     pending_unmount_ts_us  = 0;
     pending_unmount_device = HID_NONE;
 
-    botDetection_reset();
+    pktFilterReset();
     proxy_queue_reset();
     kb_latency_pending             = false;
     kb_pending_pkt_timestamp_us    = 0;
@@ -120,7 +121,7 @@ void process_hid()
                 pending_unmount_ts_us  = 0;
                 pending_unmount_device = HID_NONE;
 
-                botDetection_reset();
+                pktFilterReset();
                 proxy_queue_reset();
                 kb_latency_pending             = false;
                 kb_pending_pkt_timestamp_us    = 0;
@@ -151,6 +152,8 @@ void process_hid()
         bool filtering_enabled = false;
 #endif
 
+        bool whitelist_mode = ui_is_whitelist_enabled();
+
         proxy_device_t event_device = (pkt.dev_t != HID_NONE) ? pkt.dev_t : selected_device;
         if (pkt.msg_t == PROXY_MSG_UNMOUNT)
         {
@@ -160,7 +163,25 @@ void process_hid()
             return;
         }
 
-        if (filtering_enabled)
+        if (whitelist_mode)
+        {
+            // Only check VID/PID on mount; reports pass through with no filtering
+            if (pkt.msg_t == PROXY_MSG_MOUNT)
+            {
+                if (!whitelist_check(pkt.vid, pkt.pid))
+                {
+                    ui_on_enumeration_result(false);
+                    metrics_record_event((detection_event_t){.device_type = event_device, .event_type = EVENT_ENUM_ERROR});
+                    metrics_try_export_cdc();
+                    return;
+                }
+                ui_on_enumeration_result(true);
+                metrics_record_event((detection_event_t){.device_type = event_device, .event_type = EVENT_ENUM_OK});
+                metrics_try_export_cdc();
+            }
+            filtering_enabled = false;
+        }
+        else if (filtering_enabled)
         {
             enumeration_result_t enum_result = enumerationCheck(&pkt, selected_device);
             if (enum_result == ENUM_CHECK_ERROR)
@@ -181,19 +202,19 @@ void process_hid()
                 metrics_try_export_cdc();
             }
 
-            bool bot_detected = botDetection(&pkt);
-            if (bot_detected)
+            bool pkt_blocked = filterPacket(&pkt);
+            if (pkt_blocked)
             {
-                botDetection_reset();
+                pktFilterReset();
                 proxy_queue_reset();
                 kb_latency_pending             = false;
                 kb_pending_pkt_timestamp_us    = 0;
                 kb_pending_submit_timestamp_us = 0;
                 metrics_reset_transient_state();
                 ui_on_security_error();
-                metrics_record_event((detection_event_t){.device_type = event_device, .event_type = EVENT_BOT_DETECTED});
+                metrics_record_event((detection_event_t){.device_type = event_device, .event_type = EVENT_PKT_BLOCKED});
                 metrics_record_report_processed(true);
-                // Drain queued events so BOT_DETECTED is emitted immediately.
+                // Drain queued events so pkt_blocked is emitted immediately.
                 for (uint8_t i = 0; i < 16; i++)
                 {
                     metrics_try_export_cdc();
@@ -239,6 +260,9 @@ void process_hid()
             break;
 
         case PROXY_MSG_MOUNT:
+            if (ui_is_whitelist_add_mode())
+                ui_on_whitelist_device_connected(pkt.vid, pkt.pid);
+
             tud_hid_report(pkt.dev_t, pkt.report, pkt.report_len);
             break;
 

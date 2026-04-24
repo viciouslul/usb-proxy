@@ -18,7 +18,7 @@ typedef enum
     ENUM_CHECK_UNMOUNT,
 } enumeration_result_t;
 
-bool                 botDetection(proxy_packet_t *pkt);
-void                 botDetection_reset(void);
+bool                 filterPacket(proxy_packet_t *pkt);
+void                 pktFilterReset(void);
 enumeration_result_t enumerationCheck(proxy_packet_t *pkt,
                                       proxy_device_t  selected_device);
