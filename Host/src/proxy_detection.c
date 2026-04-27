@@ -188,6 +188,11 @@ enumeration_result_t enumerationCheck(proxy_packet_t *pkt,
 
 static void packageValidation(uint8_t *report, uint16_t report_len, proxy_device_t dev_t)
 {
+    // Empty reports are stale IN-completions emitted by the host stack during
+    // disconnect — they carry no payload and are not a bot signature.
+    if (report_len == 0)
+        return;
+
     switch (dev_t)
     {
     case HID_KEYBOARD:

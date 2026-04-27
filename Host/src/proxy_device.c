@@ -98,7 +98,16 @@ void process_hid()
     {
         proxy_device_t selected_device = ui_get_selected_device();
         if (selected_device == HID_NONE)
-            return;
+        {
+            // Whitelist add mode has no "selected device" in the menu sense,
+            // but still needs to capture VID/PID of the next mount.
+            if (pkt.msg_t == PROXY_MSG_MOUNT && ui_is_whitelist_add_mode())
+            {
+                ui_on_whitelist_device_connected(pkt.vid, pkt.pid);
+            }
+            // Nothing to forward — drain and move on.
+            continue;
+        }
 
         if (pkt.msg_t == PROXY_MSG_REPORT)
         {

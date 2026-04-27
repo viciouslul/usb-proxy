@@ -149,8 +149,8 @@ void ui_task(void)
         break;
 
     case UI_SCREEN_SELECT_WHITELIST:
-        lcd_write_line(&lcd, 0, "Select Device:");
-        lcd_write_line(&lcd, 1, "Whitelist");
+        lcd_write_line(&lcd, 0, "Whitelist:");
+        lcd_write_line(&lcd, 1, "Settings");
         lcd_show(&lcd);
         update_display = false;
         break;
@@ -208,12 +208,7 @@ void ui_task(void)
     case UI_SCREEN_WHITELIST_BROWSE:
     {
         uint8_t count = whitelist_count();
-        if (count == 0)
-        {
-            lcd_write_line(&lcd, 0, "List is empty");
-            lcd_write_line(&lcd, 1, "Scrl=Back");
-        }
-        else if (browse_index >= count)
+        if (count == 0 || browse_index >= count)
         {
             lcd_write_line(&lcd, 0, "Whitelist:");
             lcd_write_line(&lcd, 1, "> Back");
