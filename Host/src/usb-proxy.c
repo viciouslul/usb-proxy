@@ -1,28 +1,30 @@
-#include "tusb.h"
-#include "hardware/clocks.h"
 #include "bsp/board_api.h"
+#include "hardware/clocks.h"
 #include "pico/multicore.h"
 #include "pico/stdlib.h"
+#include "tusb.h"
 
-#include "proxy_host.h"
 #include "proxy_device.h"
+#include "proxy_host.h"
+#include "proxy_metrics.h"
 #include "proxy_ssd1306.h"
 #include "proxy_ui.h"
-#include "proxy_metrics.h"
+#include "proxy_whitelist.h"
 
-#define SCROLL_BTN  26 //A0
-#define SCROLL_GND  27 //A1
-#define SELECT_GND  28 //A2
-#define SELECT_BTN  29 //A3
+#define SCROLL_BTN 26 // A0
+#define SCROLL_GND 27 // A1
+#define SELECT_GND 28 // A2
+#define SELECT_BTN 29 // A3
 
-#define SDA_PIN     2
-#define SCL_PIN     3
-#define LED_PIN     13
+#define SDA_PIN 2
+#define SCL_PIN 3
+#define LED_PIN 13
 
 void gpio_callback(uint gpio, uint32_t events)
 {
-    (void) events;
-    if (ui_has_selected_device()) return;
+    (void)events;
+    if (ui_has_selected_device())
+        return;
     static volatile uint32_t last_scroll_btn = 0;
 
     uint32_t ms_now = board_millis();
@@ -82,6 +84,7 @@ void global_init()
     gpio_set_dir(SCROLL_GND, GPIO_OUT);
     gpio_put(SCROLL_GND, 0);
 
+    whitelist_init();
 }
 
 void core1_main()

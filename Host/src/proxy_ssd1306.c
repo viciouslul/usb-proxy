@@ -26,23 +26,32 @@ static void lcd_data(lcd_t *lcd, const uint8_t *data, size_t len)
 
 void lcd_init(lcd_t *lcd, i2c_inst_t *i2c, uint8_t addr)
 {
-    lcd->i2c = i2c;
+    lcd->i2c  = i2c;
     lcd->addr = addr;
     sleep_ms(100);
 
     lcd_cmd(lcd, 0xAE);
-    lcd_cmd(lcd, 0xD5); lcd_cmd(lcd, 0x80);
-    lcd_cmd(lcd, 0xA8); lcd_cmd(lcd, 0x1F);
-    lcd_cmd(lcd, 0xD3); lcd_cmd(lcd, 0x00);
+    lcd_cmd(lcd, 0xD5);
+    lcd_cmd(lcd, 0x80);
+    lcd_cmd(lcd, 0xA8);
+    lcd_cmd(lcd, 0x1F);
+    lcd_cmd(lcd, 0xD3);
+    lcd_cmd(lcd, 0x00);
     lcd_cmd(lcd, 0x40);
-    lcd_cmd(lcd, 0x8D); lcd_cmd(lcd, 0x14);
-    lcd_cmd(lcd, 0x20); lcd_cmd(lcd, 0x00);
+    lcd_cmd(lcd, 0x8D);
+    lcd_cmd(lcd, 0x14);
+    lcd_cmd(lcd, 0x20);
+    lcd_cmd(lcd, 0x00);
     lcd_cmd(lcd, 0xA1);
     lcd_cmd(lcd, 0xC8);
-    lcd_cmd(lcd, 0xDA); lcd_cmd(lcd, 0x00);
-    lcd_cmd(lcd, 0x81); lcd_cmd(lcd, 0x8F);
-    lcd_cmd(lcd, 0xD9); lcd_cmd(lcd, 0x1F);
-    lcd_cmd(lcd, 0xDB); lcd_cmd(lcd, 0x40);
+    lcd_cmd(lcd, 0xDA);
+    lcd_cmd(lcd, 0x00);
+    lcd_cmd(lcd, 0x81);
+    lcd_cmd(lcd, 0x8F);
+    lcd_cmd(lcd, 0xD9);
+    lcd_cmd(lcd, 0x1F);
+    lcd_cmd(lcd, 0xDB);
+    lcd_cmd(lcd, 0x40);
     lcd_cmd(lcd, 0xA4);
     lcd_cmd(lcd, 0xA6);
 
@@ -73,7 +82,8 @@ void lcd_show(lcd_t *lcd)
 
 void lcd_write_line(lcd_t *lcd, int row, const char *text)
 {
-    if (row < 0 || row >= LCD_ROWS) return;
+    if (row < 0 || row >= LCD_ROWS)
+        return;
 
     int top_base = row * 2 * LCD_WIDTH;
     int bot_base = top_base + LCD_WIDTH;
@@ -93,7 +103,7 @@ void lcd_write_line(lcd_t *lcd, int row, const char *text)
         for (int i = 0; i < FONT_W; i++)
         {
             lcd->buf[top_base + x + i] = font_8x16[c][i];
-            lcd->buf[bot_base + x + i] = font_8x16[c][i+8];
+            lcd->buf[bot_base + x + i] = font_8x16[c][i + 8];
         }
 
         x += FONT_W;

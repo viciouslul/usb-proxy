@@ -1,23 +1,24 @@
 #pragma once
 
-#include <stdint.h>
-#include <hardware/i2c.h>
 #include <hardware/gpio.h>
+#include <hardware/i2c.h>
+#include <stdint.h>
 
-#define LCD_ADDR    0x3C
-#define LCD_WIDTH   128
-#define LCD_HEIGHT  32
+#define LCD_ADDR     0x3C
+#define LCD_WIDTH    128
+#define LCD_HEIGHT   32
 #define LCD_BUF_SIZE (LCD_WIDTH * LCD_HEIGHT / 8)
 
-#define FONT_W      8
-#define FONT_H      16
-#define LCD_COLS    (LCD_WIDTH / FONT_W)
-#define LCD_ROWS    (LCD_HEIGHT / FONT_H)
+#define FONT_W   8
+#define FONT_H   16
+#define LCD_COLS (LCD_WIDTH / FONT_W)
+#define LCD_ROWS (LCD_HEIGHT / FONT_H)
 
-typedef struct {
+typedef struct
+{
     i2c_inst_t *i2c;
-    uint8_t addr;
-    uint8_t buf[LCD_BUF_SIZE];
+    uint8_t     addr;
+    uint8_t     buf[LCD_BUF_SIZE];
 } lcd_t;
 
 static const uint8_t font_8x16[][16] = {
